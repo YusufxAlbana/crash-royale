@@ -74,103 +74,168 @@
         </div>
         
         <div class="menu-content">
-            <!-- Quick Stats Bar -->
-            <div class="quick-stats-bar">
-                <div class="quick-stat">
-                    <span class="qs-icon">✅</span>
-                    <span class="qs-value" id="qs-wins">0</span>
-                    <span class="qs-label">Wins</span>
+            <!-- LEFT COLUMN - Stats & Info -->
+            <div class="home-column left-col">
+                <!-- Battle Stats -->
+                <div class="home-panel stats-panel">
+                    <h3>📊 Battle Stats</h3>
+                    <div class="stats-grid">
+                        <div class="stat-box win">
+                            <span class="stat-number" id="stat-wins">0</span>
+                            <span class="stat-label">Wins</span>
+                        </div>
+                        <div class="stat-box lose">
+                            <span class="stat-number" id="stat-losses">0</span>
+                            <span class="stat-label">Losses</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-number" id="stat-winrate">0%</span>
+                            <span class="stat-label">Win Rate</span>
+                        </div>
+                        <div class="stat-box crown">
+                            <span class="stat-number" id="stat-crowns">0</span>
+                            <span class="stat-label">3-Crowns</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="quick-stat">
-                    <span class="qs-icon">❌</span>
-                    <span class="qs-value" id="qs-losses">0</span>
-                    <span class="qs-label">Losses</span>
+                
+                <!-- Current Deck Preview -->
+                <div class="home-panel deck-panel">
+                    <div class="panel-header">
+                        <h3>🎴 Your Deck</h3>
+                        <span class="deck-elixir">⚡ <span id="menu-avg-elixir">0.0</span></span>
+                    </div>
+                    <div class="deck-preview" id="menu-deck-preview">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    <button id="deck-btn" class="panel-btn">Edit Deck</button>
                 </div>
-                <div class="quick-stat">
-                    <span class="qs-icon">📊</span>
-                    <span class="qs-value" id="qs-winrate">0%</span>
-                    <span class="qs-label">Win Rate</span>
-                </div>
-                <div class="quick-stat">
-                    <span class="qs-icon">👑</span>
-                    <span class="qs-value" id="qs-crowns">0</span>
-                    <span class="qs-label">3-Crowns</span>
-                </div>
-            </div>
-            
-            <!-- Main Battle Section -->
-            <div class="battle-section">
-                <div class="arena-display">
-                    <div class="arena-badge">🏟️</div>
-                    <h2 id="current-arena">Arena 1</h2>
-                    <p class="arena-subtitle">Training Camp</p>
-                </div>
-                <button id="battle-btn" class="btn-battle">
-                    <span class="battle-icon">⚔️</span>
-                    <span class="battle-text">BATTLE</span>
-                    <span class="battle-sub">Find Opponent</span>
-                </button>
-            </div>
-            
-            <!-- Menu Grid -->
-            <div class="menu-grid">
-                <button id="deck-btn" class="menu-card">
-                    <span class="mc-icon">🎴</span>
-                    <span class="mc-title">Deck</span>
-                    <span class="mc-desc">Build your deck</span>
-                </button>
-                <button id="cards-btn" class="menu-card">
-                    <span class="mc-icon">🃏</span>
-                    <span class="mc-title">Cards</span>
-                    <span class="mc-desc">View all cards</span>
-                </button>
-                <button id="history-btn" class="menu-card">
-                    <span class="mc-icon">📜</span>
-                    <span class="mc-title">History</span>
-                    <span class="mc-desc">Match replays</span>
-                </button>
-                <button id="leaderboard-btn" class="menu-card">
-                    <span class="mc-icon">🏅</span>
-                    <span class="mc-title">Ranks</span>
-                    <span class="mc-desc">Leaderboard</span>
-                </button>
-            </div>
-            
-            <!-- Featured Section -->
-            <div class="featured-section">
-                <h3>🌟 Featured Cards</h3>
-                <div class="featured-cards" id="featured-cards">
-                    <!-- Will be populated by JS -->
-                </div>
-            </div>
-            
-            <!-- Tips Section -->
-            <div class="tips-section">
-                <div class="tip-card">
-                    <span class="tip-icon">💡</span>
+                
+                <!-- Tips -->
+                <div class="home-panel tip-panel">
                     <div class="tip-content">
-                        <span class="tip-title">Tip of the Day</span>
+                        <span class="tip-icon">💡</span>
                         <span class="tip-text" id="daily-tip">Place troops behind your King Tower for a stronger push!</span>
                     </div>
                 </div>
             </div>
             
-            <!-- Current Deck Preview -->
-            <div class="deck-preview-section">
-                <div class="deck-preview-header">
-                    <h3>🎴 Your Deck</h3>
-                    <span class="deck-elixir">⚡ <span id="menu-avg-elixir">0.0</span></span>
+            <!-- CENTER COLUMN - Battle -->
+            <div class="home-column center-col">
+                <!-- Arena & Battle -->
+                <div class="battle-section">
+                    <div class="arena-display">
+                        <div class="arena-badge">🏟️</div>
+                        <h2 id="current-arena">Arena 1</h2>
+                        <p class="arena-subtitle">Training Camp</p>
+                        <div class="arena-progress">
+                            <div class="arena-progress-bar">
+                                <div class="arena-progress-fill" id="arena-progress-fill" style="width: 30%"></div>
+                            </div>
+                            <span class="arena-progress-text">0 / 400 🏆</span>
+                        </div>
+                    </div>
+                    
+                    <button id="battle-btn" class="btn-battle">
+                        <span class="battle-icon">⚔️</span>
+                        <span class="battle-text">BATTLE</span>
+                        <span class="battle-sub">Find Opponent</span>
+                    </button>
+                    
+                    <div class="battle-modes">
+                        <button class="mode-btn active" data-mode="1v1">
+                            <span>⚔️</span>
+                            <span>1v1</span>
+                        </button>
+                        <button class="mode-btn" data-mode="2v2">
+                            <span>👥</span>
+                            <span>2v2</span>
+                        </button>
+                        <button class="mode-btn" data-mode="challenge">
+                            <span>🏅</span>
+                            <span>Challenge</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="deck-preview" id="menu-deck-preview">
-                    <!-- Will be populated by JS -->
+                
+                <!-- Menu Buttons -->
+                <div class="menu-grid">
+                    <button id="cards-btn" class="menu-card">
+                        <span class="mc-icon">🃏</span>
+                        <span class="mc-title">Cards</span>
+                    </button>
+                    <button id="history-btn" class="menu-card">
+                        <span class="mc-icon">📜</span>
+                        <span class="mc-title">History</span>
+                    </button>
+                    <button id="leaderboard-btn" class="menu-card">
+                        <span class="mc-icon">🏅</span>
+                        <span class="mc-title">Ranks</span>
+                    </button>
+                    <button id="shop-btn" class="menu-card">
+                        <span class="mc-icon">🛒</span>
+                        <span class="mc-title">Shop</span>
+                    </button>
                 </div>
             </div>
             
-            <!-- Recent Match -->
-            <div class="recent-match-section" id="recent-match-section" style="display: none;">
-                <h3>🕐 Last Match</h3>
-                <div class="recent-match" id="recent-match">
-                    <!-- Will be populated by JS -->
+            <!-- RIGHT COLUMN - Leaderboard & Chests -->
+            <div class="home-column right-col">
+                <!-- Leaderboard Preview -->
+                <div class="home-panel leaderboard-panel">
+                    <h3>🏆 Top Players</h3>
+                    <div class="leaderboard-list">
+                        <div class="lb-item rank-1">
+                            <span class="lb-rank">🥇</span>
+                            <span class="lb-name">ProPlayer123</span>
+                            <span class="lb-score">5,432</span>
+                        </div>
+                        <div class="lb-item rank-2">
+                            <span class="lb-rank">🥈</span>
+                            <span class="lb-name">ArenaKing</span>
+                            <span class="lb-score">5,210</span>
+                        </div>
+                        <div class="lb-item rank-3">
+                            <span class="lb-rank">🥉</span>
+                            <span class="lb-name">BattleMaster</span>
+                            <span class="lb-score">4,987</span>
+                        </div>
+                        <div class="lb-item your-rank">
+                            <span class="lb-rank">#--</span>
+                            <span class="lb-name">You</span>
+                            <span class="lb-score" id="lb-your-trophies">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chest Section -->
+                <div class="home-panel chest-panel">
+                    <h3>📦 Chests</h3>
+                    <div class="chest-slots">
+                        <div class="chest-slot ready">
+                            <div class="chest-icon">🎁</div>
+                            <div class="chest-info">
+                                <span class="chest-type">Silver</span>
+                                <span class="chest-status">OPEN!</span>
+                            </div>
+                        </div>
+                        <div class="chest-slot empty">
+                            <div class="chest-icon">➕</div>
+                            <div class="chest-info">
+                                <span class="chest-type">Empty</span>
+                                <span class="chest-status">Win to earn</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Online Status -->
+                <div class="home-panel online-panel">
+                    <div class="online-indicator">
+                        <span class="pulse-dot"></span>
+                        <span class="online-count" id="online-count">1,234</span>
+                        <span class="online-label">Players Online</span>
+                    </div>
                 </div>
             </div>
         </div>

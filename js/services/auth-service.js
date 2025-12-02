@@ -21,20 +21,34 @@ const AuthService = {
         console.log('Auth mode:', this.isOnline ? 'ONLINE (Firebase)' : 'OFFLINE (localStorage)');
         
         // Check for existing session
+        this.restoreSession();
+    },
+
+    /**
+     * Restore session from localStorage
+     */
+    restoreSession() {
         const savedUser = localStorage.getItem(this.CURRENT_USER_KEY);
         if (savedUser) {
             try {
                 this.userProfile = JSON.parse(savedUser);
                 this.currentUser = { username: this.userProfile.username };
+                console.log('Session restored for:', this.userProfile.username);
                 
-                // Sync with Firebase if online
+                // Sync with Firebase if online (don't block on this)
                 if (this.isOnline) {
-                    this.syncFromFirebase(this.userProfile.username);
+                    this.syncFromFirebase(this.userProfile.username).catch(err => {
+                        console.warn('Firebase sync failed, using local data:', err);
+                    });
                 }
+                
+                return true;
             } catch (e) {
+                console.error('Failed to restore session:', e);
                 localStorage.removeItem(this.CURRENT_USER_KEY);
             }
         }
+        return false;
     },
 
     /**

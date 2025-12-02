@@ -346,6 +346,11 @@ const ScreenManager = {
         document.getElementById('player-level').textContent = `Level ${user.level || 1}`;
         document.getElementById('player-trophies').textContent = user.trophies || 0;
         document.getElementById('player-gold').textContent = user.gold || 0;
+        
+        // Update home screen content if functions exist
+        if (typeof updateQuickStats === 'function') updateQuickStats();
+        if (typeof updateArenaInfo === 'function') updateArenaInfo();
+        if (typeof updateDeckPreview === 'function') updateDeckPreview();
     },
     
     /**

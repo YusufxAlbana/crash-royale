@@ -46,8 +46,8 @@ let isOfflineMode = false;
  */
 function initializeFirebase() {
     try {
-        // Check if config is still placeholder
-        if (firebaseConfig.apiKey === "YOUR_API_KEY_HERE" || !firebaseConfig.apiKey) {
+        // Check if config is valid (has apiKey and projectId)
+        if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
             console.warn("⚠️ Firebase config belum diisi! Game berjalan dalam mode OFFLINE.");
             console.warn("📝 Buka js/config/firebase-config.js dan isi dengan config Firebase Anda.");
             isOfflineMode = true;
@@ -66,8 +66,11 @@ function initializeFirebase() {
         firebaseAuth = firebase.auth();
         firebaseDb = firebase.firestore();
 
-        // Enable offline persistence
+        // Enable offline persistence (don't wait for it)
         firebaseDb.enablePersistence({ synchronizeTabs: true })
+            .then(() => {
+                console.log("Firestore persistence enabled");
+            })
             .catch((err) => {
                 if (err.code === 'failed-precondition') {
                     console.warn("Firestore persistence failed: Multiple tabs open");
