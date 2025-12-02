@@ -1,1100 +1,226 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Clash Mini Arena: Deck Builder</title>
-    <!-- Import Font Kartun -->
-    <link href="https://fonts.googleapis.com/css2?family=Titan+One&family=Roboto:wght@500;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #121212;
-            font-family: 'Roboto', sans-serif;
-            touch-action: none;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* --- GAME AREA --- */
-        #game-wrapper {
-            position: relative;
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #202020;
-            overflow: hidden;
-            width: 100%;
-        }
-
-        canvas {
-            box-shadow: 0 0 30px rgba(0,0,0,0.8);
-            border-left: 2px solid #000;
-            border-right: 2px solid #000;
-        }
-        
-        /* Top HUD */
-        .hud-top {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            pointer-events: none;
-            z-index: 10;
-            width: 100%;
-        }
-
-        .timer-box {
-            background: rgba(0,0,0,0.6);
-            color: #fff;
-            padding: 5px 15px;
-            border-radius: 20px;
-            border: 2px solid #aaa;
-            font-family: 'Titan One', cursive;
-            font-size: 24px;
-            text-shadow: 2px 2px 0 #000;
-            letter-spacing: 1px;
-        }
-        
-        .enemy-name {
-            margin-bottom: 5px;
-            color: #ff5555;
-            font-family: 'Titan One', cursive;
-            font-size: 14px;
-            text-shadow: 1px 1px 0 #000;
-            background: rgba(0,0,0,0.4);
-            padding: 2px 10px;
-            border-radius: 10px;
-        }
-
-        /* --- BOTTOM CONTROLS --- */
-        .hud-bottom {
-            height: auto;
-            min-height: 160px;
-            background: #363636;
-            background-image: radial-gradient(circle at center, #444 0%, #222 100%);
-            border-top: 5px solid #1a1a1a;
-            padding: 10px 5px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 8px;
-            z-index: 20;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.7);
-        }
-
-        /* Elixir Bar */
-        #elixir-container {
-            width: 95%;
-            max-width: 500px;
-            position: relative;
-            margin-bottom: 5px;
-        }
-
-        #elixir-bar-bg {
-            height: 20px;
-            background: #111;
-            border-radius: 10px;
-            border: 2px solid #555;
-            overflow: hidden;
-            position: relative;
-        }
-
-        #elixir-fill {
-            height: 100%;
-            width: 50%;
-            background: linear-gradient(to bottom, #d56eff, #aa00aa);
-            box-shadow: 0 0 10px #d000d0;
-            transition: width 0.2s linear;
-            position: relative;
-        }
-        
-        .elixir-segment {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 10%;
-            border-right: 1px solid rgba(0,0,0,0.3);
-            pointer-events: none;
-        }
-
-        #elixir-value {
-            position: absolute;
-            right: 0;
-            top: -25px;
-            color: #d56eff;
-            font-family: 'Titan One', cursive;
-            font-size: 20px;
-            text-shadow: 2px 2px 0 #000;
-            background: rgba(0,0,0,0.8);
-            padding: 2px 8px;
-            border-radius: 8px;
-            border: 1px solid #d56eff;
-        }
-        
-        #elixir-label {
-            position: absolute;
-            left: 2px;
-            top: -22px;
-            color: #fff;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Cards Area */
-        .cards-scroll-container {
-            width: 100%;
-            overflow-x: auto;
-            display: flex;
-            justify-content: center;
-            padding-bottom: 5px;
-        }
-
-        .cards-container {
-            display: flex;
-            gap: 12px;
-            padding: 0 10px;
-        }
-
-        /* Card Design */
-        .card {
-            width: 75px;
-            height: 100px;
-            background: #555;
-            border-radius: 8px;
-            position: relative;
-            cursor: pointer;
-            transition: transform 0.1s, filter 0.2s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            border: 2px solid #333;
-        }
-        
-        .card.common { border-color: #6daee4; background: #2b3b4b; }
-        .card.rare { border-color: #faa730; background: #4b3b2b; }
-        .card.epic { border-color: #c94eff; background: #3b2b4b; }
-
-        .card:active { transform: scale(0.95); }
-        .card.active { 
-            transform: translateY(-15px) scale(1.05); 
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
-            border-color: #fff;
-            z-index: 5;
-        }
-        .card.disabled { 
-            filter: grayscale(1) brightness(0.6); 
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .card-image {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 40px;
-            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(0,0,0,0) 70%);
-        }
-        
-        .card-cost {
-            position: absolute;
-            top: -5px;
-            left: -5px;
-            width: 26px;
-            height: 26px;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23d56eff"><path d="M12 2C8 6 4 10 4 14c0 4.4 3.6 8 8 8s8-3.6 8-8c0-4-4-8-8-12z"/></svg>') no-repeat center;
-            background-size: cover;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-family: 'Titan One', cursive;
-            font-size: 14px;
-            text-shadow: 1px 1px 0 #000;
-            filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.8));
-            z-index: 2;
-            padding-top: 3px;
-        }
-
-        .card-name {
-            height: 22px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            font-size: 10px;
-            text-align: center;
-            line-height: 22px;
-            font-weight: bold;
-            text-transform: uppercase;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding: 0 2px;
-        }
-        
-        /* --- OVERLAYS & MENU --- */
-        #menu-screen {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #202020;
-            z-index: 200;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .menu-title {
-            font-family: 'Titan One', cursive;
-            font-size: 28px;
-            color: #fccb00;
-            text-shadow: 2px 2px 0 #000;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        
-        .deck-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            padding: 10px;
-            max-width: 400px;
-            margin-bottom: 20px;
-        }
-        
-        .deck-card-wrapper {
-            position: relative;
-        }
-        
-        /* Checkmark for selection */
-        .selected-mark {
-            position: absolute;
-            top: -5px; right: -5px;
-            width: 25px; height: 25px;
-            background: #4CAF50;
-            border-radius: 50%;
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            border: 2px solid white;
-            z-index: 10;
-            display: none;
-        }
-        
-        .card.selected {
-            border-color: #4CAF50;
-            box-shadow: 0 0 15px #4CAF50;
-            transform: scale(0.95);
-        }
-        .card.selected .selected-mark {
-            display: flex;
-        }
-
-        #message-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(to bottom, #2b3b4b, #1a1a1a);
-            padding: 30px 50px;
-            border-radius: 20px;
-            text-align: center;
-            display: none;
-            border: 4px solid #6daee4;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8);
-            z-index: 100;
-            animation: popIn 0.3s ease-out;
-        }
-        
-        @keyframes popIn {
-            from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-            to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-        }
-
-        #result-title {
-            margin: 0 0 20px 0;
-            font-family: 'Titan One', cursive;
-            font-size: 40px;
-            text-shadow: 3px 3px 0 #000;
-            -webkit-text-stroke: 1px #000;
-        }
-
-        .btn-primary {
-            background: linear-gradient(to bottom, #fccb00, #e68a00);
-            color: white;
-            border: none;
-            border-bottom: 4px solid #b36b00;
-            padding: 12px 30px;
-            border-radius: 10px;
-            font-family: 'Titan One', cursive;
-            font-size: 18px;
-            text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-        .btn-primary:active {
-            transform: translateY(4px);
-            border-bottom: 0;
-            margin-top: 4px;
-        }
-        .btn-primary:disabled {
-            filter: grayscale(1);
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .deck-counter {
-            color: white;
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
-
-        @media (max-width: 400px) {
-            .deck-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Battle Royale Arena</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/game.css">
+    <link rel="stylesheet" href="css/ui.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
-
-    <!-- MENU SCREEN -->
-    <div id="menu-screen">
-        <div class="menu-title">PILIH 4 KARTU</div>
-        <div class="deck-grid" id="menu-grid">
-            <!-- Grid cards injected here -->
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen active">
+        <div class="loading-content">
+            <h1>⚔️ Battle Arena</h1>
+            <div class="loading-spinner"></div>
+            <p>Loading...</p>
         </div>
-        <div class="deck-counter" id="deck-counter">Terpilih: 0/4</div>
-        <button class="btn-primary" id="start-btn" onclick="startGame()" disabled>TEMPUR!</button>
     </div>
 
-    <!-- GAME AREA -->
-    <div id="game-wrapper">
-        <canvas id="gameCanvas"></canvas>
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="screen">
+        <div class="auth-container">
+            <h1>⚔️ Battle Arena</h1>
+            <div class="auth-tabs">
+                <button class="tab-btn active" data-tab="login">Login</button>
+                <button class="tab-btn" data-tab="register">Register</button>
+            </div>
+            
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form active">
+                <input type="email" id="login-email" placeholder="Email" required>
+                <input type="password" id="login-password" placeholder="Password" required>
+                <button type="submit" class="btn-primary">Login</button>
+                <p class="error-msg" id="login-error"></p>
+            </form>
+            
+            <!-- Register Form -->
+            <form id="register-form" class="auth-form">
+                <input type="text" id="register-username" placeholder="Username" required>
+                <input type="email" id="register-email" placeholder="Email" required>
+                <input type="password" id="register-password" placeholder="Password" required>
+                <button type="submit" class="btn-primary">Register</button>
+                <p class="error-msg" id="register-error"></p>
+            </form>
+            
+            <button id="guest-login" class="btn-secondary">Play as Guest</button>
+        </div>
+    </div>
+
+    <!-- Main Menu Screen -->
+    <div id="menu-screen" class="screen">
+        <div class="menu-header">
+            <div class="player-info">
+                <div class="player-avatar">👤</div>
+                <div class="player-details">
+                    <span id="player-name">Player</span>
+                    <span id="player-level">Level 1</span>
+                </div>
+            </div>
+            <div class="player-stats">
+                <div class="stat">
+                    <span class="stat-icon">🏆</span>
+                    <span id="player-trophies">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-icon">💰</span>
+                    <span id="player-gold">0</span>
+                </div>
+            </div>
+            <button id="logout-btn" class="btn-icon">🚪</button>
+        </div>
         
-        <div class="hud-top">
-            <div class="enemy-name">Lawan (Trainer)</div>
-            <div class="timer-box" id="game-timer">03:00</div>
-        </div>
-
-        <div id="message-overlay">
-            <h1 id="result-title">MENANG!</h1>
-            <div style="font-size: 50px; margin-bottom: 20px;" id="result-icon">👑</div>
-            <button class="btn-primary" onclick="resetToMenu()">MAIN LAGI</button>
-        </div>
-    </div>
-    
-    <!-- BOTTOM CONTROLS -->
-    <div class="hud-bottom">
-        <div id="elixir-container">
-            <div id="elixir-label">Next in: 2s</div>
-            <div id="elixir-value">5</div>
-            <div id="elixir-bar-bg">
-                <div class="elixir-segment" style="left:0%"></div>
-                <div class="elixir-segment" style="left:10%"></div>
-                <div class="elixir-segment" style="left:20%"></div>
-                <div class="elixir-segment" style="left:30%"></div>
-                <div class="elixir-segment" style="left:40%"></div>
-                <div class="elixir-segment" style="left:50%"></div>
-                <div class="elixir-segment" style="left:60%"></div>
-                <div class="elixir-segment" style="left:70%"></div>
-                <div class="elixir-segment" style="left:80%"></div>
-                <div class="elixir-segment" style="left:90%"></div>
-                <div id="elixir-fill"></div>
+        <div class="menu-content">
+            <div class="arena-display">
+                <h2 id="current-arena">Arena 1</h2>
+                <div class="arena-preview">🏟️</div>
+            </div>
+            
+            <div class="menu-buttons">
+                <button id="battle-btn" class="btn-battle">⚔️ BATTLE</button>
+                <button id="deck-btn" class="btn-menu">📋 Deck</button>
+                <button id="cards-btn" class="btn-menu">🃏 Cards</button>
+                <button id="history-btn" class="btn-menu">📜 History</button>
             </div>
         </div>
+    </div>
+
+    <!-- Deck Builder Screen -->
+    <div id="deck-screen" class="screen">
+        <div class="screen-header">
+            <button class="btn-back" id="deck-back">←</button>
+            <h2>Deck Builder</h2>
+            <div class="deck-cost">Avg Elixir: <span id="avg-elixir">0.0</span></div>
+        </div>
         
-        <div class="cards-scroll-container">
-            <div class="cards-container" id="cards-deck">
-                <!-- Cards will be injected by JS -->
-            </div>
+        <div class="current-deck">
+            <h3>Your Deck (8 Cards)</h3>
+            <div id="deck-slots" class="deck-slots"></div>
+        </div>
+        
+        <div class="available-cards">
+            <h3>Available Cards</h3>
+            <div id="available-cards" class="cards-grid"></div>
         </div>
     </div>
 
-<script>
-    // --- KONFIGURASI UTAMA ---
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const gameWrapper = document.getElementById('game-wrapper');
-    
-    const GAME_WIDTH = 420;
-    const GAME_HEIGHT = 750;
-    
-    const TEAM_PLAYER = 'blue';
-    const TEAM_ENEMY = 'red';
-    
-    // --- DATA KARTU LENGKAP (10 KARTU) ---
-    // splash: radius area damage. 0 = single target.
-    const ALL_CARDS = [
-        { id: 0, name: "Ksatria", cost: 3, rarity: "common", count: 1, type: "melee", hp: 700, dmg: 85, speed: 45, range: 20, attackSpeed: 1.1, icon: "⚔️", splash: 0 },
-        { id: 1, name: "Pemanah", cost: 3, rarity: "common", count: 2, type: "ranged", hp: 200, dmg: 45, speed: 50, range: 130, attackSpeed: 1.0, icon: "🏹", splash: 0 },
-        { id: 2, name: "Goblins", cost: 2, rarity: "common", count: 3, type: "melee", hp: 120, dmg: 55, speed: 85, range: 15, attackSpeed: 0.8, icon: "👺", splash: 0 },
-        { id: 3, name: "Raksasa", cost: 5, rarity: "rare", count: 1, type: "building_target", hp: 2200, dmg: 140, speed: 30, range: 25, attackSpeed: 1.5, icon: "👹", splash: 0 },
-        { id: 4, name: "Penyihir", cost: 5, rarity: "rare", count: 1, type: "ranged", hp: 450, dmg: 110, speed: 45, range: 120, attackSpeed: 1.4, icon: "🔥", splash: 60 },
-        { id: 5, name: "Mini Robot", cost: 4, rarity: "epic", count: 1, type: "melee", hp: 800, dmg: 350, speed: 70, range: 20, attackSpeed: 1.6, icon: "🤖", splash: 0 },
-        // KARTU BARU
-        { id: 6, name: "Skeleton Army", cost: 3, rarity: "epic", count: 5, type: "melee", hp: 60, dmg: 40, speed: 60, range: 15, attackSpeed: 1.0, icon: "💀", splash: 0 },
-        { id: 7, name: "Hog Rider", cost: 4, rarity: "rare", count: 1, type: "building_target", hp: 1000, dmg: 180, speed: 90, range: 20, attackSpeed: 1.2, icon: "🐖", splash: 0 },
-        { id: 8, name: "Valkyrie", cost: 4, rarity: "rare", count: 1, type: "melee", hp: 1200, dmg: 140, speed: 50, range: 30, attackSpeed: 1.5, icon: "🪓", splash: 50 }, // Melee Splash
-        { id: 9, name: "Musketeer", cost: 4, rarity: "rare", count: 1, type: "ranged", hp: 500, dmg: 160, speed: 45, range: 160, attackSpeed: 1.1, icon: "👒", splash: 0 }
-    ];
+    <!-- Match History Screen -->
+    <div id="history-screen" class="screen">
+        <div class="screen-header">
+            <button class="btn-back" id="history-back">←</button>
+            <h2>Match History</h2>
+        </div>
+        <div id="history-list" class="history-list"></div>
+    </div>
 
-    // State Game
-    let lastTime = 0;
-    let gameTime = 180;
-    let gameOver = true; // Start in Menu
-    let isPaused = true;
-    let entities = [];
-    let projectiles = [];
-    let towers = [];
-    let particles = [];
-    
-    let playerElixir = 5;
-    let enemyElixir = 5;
-    const MAX_ELIXIR = 10;
-    const ELIXIR_REGEN_RATE = 0.6;
-    
-    let selectedDeckIndices = []; // Indices from ALL_CARDS
-    let playerDeck = []; // The actual card objects
-    let selectedCardIndex = -1; // Index within playerDeck (0-3)
-    let aiSpawnTimer = 0;
+    <!-- Matchmaking Screen -->
+    <div id="matchmaking-screen" class="screen">
+        <div class="matchmaking-content">
+            <h2>Finding Opponent...</h2>
+            <div class="matchmaking-animation">
+                <div class="player-side">
+                    <div class="player-avatar">👤</div>
+                    <span id="mm-player-name">You</span>
+                </div>
+                <div class="vs-text">VS</div>
+                <div class="opponent-side">
+                    <div class="opponent-avatar">❓</div>
+                    <span id="mm-opponent-name">Searching...</span>
+                </div>
+            </div>
+            <div class="loading-spinner"></div>
+            <button id="cancel-matchmaking" class="btn-secondary">Cancel</button>
+        </div>
+    </div>
 
-    // --- MENU LOGIC ---
-    
-    function initMenu() {
-        const grid = document.getElementById('menu-grid');
-        grid.innerHTML = '';
-        selectedDeckIndices = [];
-        updateDeckCounter();
-        
-        ALL_CARDS.forEach((card, index) => {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'deck-card-wrapper';
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen">
+        <!-- Game Canvas Container -->
+        <div id="game-container">
+            <canvas id="game-canvas"></canvas>
             
-            const el = document.createElement('div');
-            el.className = `card ${card.rarity}`;
-            el.onclick = () => toggleMenuCard(index, el);
-            el.id = `menu-card-${index}`;
-            
-            el.innerHTML = `
-                <div class="selected-mark">✓</div>
-                <div class="card-cost">${card.cost}</div>
-                <div class="card-image">${card.icon}</div>
-                <div class="card-name">${card.name}</div>
-            `;
-            
-            wrapper.appendChild(el);
-            grid.appendChild(wrapper);
-        });
-        
-        // Resize canvas initially for background
-        resize();
-    }
-    
-    function toggleMenuCard(index, element) {
-        if (selectedDeckIndices.includes(index)) {
-            // Remove
-            selectedDeckIndices = selectedDeckIndices.filter(i => i !== index);
-            element.classList.remove('selected');
-        } else {
-            // Add (limit 4)
-            if (selectedDeckIndices.length < 4) {
-                selectedDeckIndices.push(index);
-                element.classList.add('selected');
-            }
-        }
-        updateDeckCounter();
-    }
-    
-    function updateDeckCounter() {
-        const count = selectedDeckIndices.length;
-        document.getElementById('deck-counter').innerText = `Terpilih: ${count}/4`;
-        document.getElementById('start-btn').disabled = count !== 4;
-    }
-    
-    function startGame() {
-        if (selectedDeckIndices.length !== 4) return;
-        
-        // Build Player Deck
-        playerDeck = selectedDeckIndices.map(i => ALL_CARDS[i]);
-        
-        // Hide Menu
-        document.getElementById('menu-screen').style.display = 'none';
-        
-        // Init Game
-        initGameLogic();
-    }
-    
-    function resetToMenu() {
-        document.getElementById('message-overlay').style.display = 'none';
-        document.getElementById('menu-screen').style.display = 'flex';
-        gameOver = true;
-        isPaused = true;
-        initMenu();
-    }
-
-    // --- RENDER IN-GAME HUD ---
-    function renderInGameDeck() {
-        const container = document.getElementById('cards-deck');
-        container.innerHTML = '';
-        playerDeck.forEach((card, index) => {
-            const el = document.createElement('div');
-            el.className = `card ${card.rarity}`;
-            el.id = `game-card-${index}`;
-            el.onclick = () => selectGameCard(index);
-            
-            el.innerHTML = `
-                <div class="card-cost">${card.cost}</div>
-                <div class="card-image">${card.icon}</div>
-                <div class="card-name">${card.name}</div>
-            `;
-            container.appendChild(el);
-        });
-    }
-
-    // --- GAME INITIALIZATION ---
-    function resize() {
-        const wrapperWidth = gameWrapper.clientWidth;
-        const wrapperHeight = gameWrapper.clientHeight;
-        let scale = Math.min(wrapperWidth / GAME_WIDTH, wrapperHeight / GAME_HEIGHT);
-        canvas.width = GAME_WIDTH * scale;
-        canvas.height = GAME_HEIGHT * scale;
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.scale(scale, scale);
-    }
-    
-    window.addEventListener('resize', resize);
-    
-    function initGameLogic() {
-        renderInGameDeck();
-        
-        gameOver = false;
-        isPaused = false;
-        gameTime = 180;
-        playerElixir = 5;
-        enemyElixir = 5;
-        entities = [];
-        projectiles = [];
-        particles = [];
-        towers = [];
-        selectedCardIndex = -1;
-        
-        // Init Towers
-        towers.push(new Tower(GAME_WIDTH/2, GAME_HEIGHT - 90, 3000, TEAM_PLAYER, 'king')); 
-        towers.push(new Tower(80, GAME_HEIGHT - 160, 1800, TEAM_PLAYER, 'princess')); 
-        towers.push(new Tower(GAME_WIDTH - 80, GAME_HEIGHT - 160, 1800, TEAM_PLAYER, 'princess')); 
-        
-        towers.push(new Tower(GAME_WIDTH/2, 90, 3000, TEAM_ENEMY, 'king')); 
-        towers.push(new Tower(80, 160, 1800, TEAM_ENEMY, 'princess')); 
-        towers.push(new Tower(GAME_WIDTH - 80, 160, 1800, TEAM_ENEMY, 'princess')); 
-        
-        resize();
-        requestAnimationFrame(gameLoop);
-    }
-
-    // --- CLASSES ---
-    class Tower {
-        constructor(x, y, hp, team, type) {
-            this.x = x; this.y = y; this.maxHp = hp; this.hp = hp;
-            this.team = team; this.type = type;
-            this.width = type === 'king' ? 60 : 45;
-            this.height = type === 'king' ? 60 : 45;
-            this.radius = 25;
-            this.range = 140;
-            this.attackSpeed = 0.8;
-            this.attackCooldown = 0;
-            this.dead = false;
-            // FIX: Menambahkan damage default untuk Tower
-            this.damage = 70;
-        }
-        update(dt) {
-            if (this.dead) return;
-            if (this.attackCooldown > 0) this.attackCooldown -= dt;
-            if (this.attackCooldown <= 0) {
-                let target = getNearestEnemy(this.x, this.y, this.team);
-                if (target && getDistance(this.x, this.y, target.x, target.y) <= this.range) {
-                    shootProjectile(this, target);
-                    this.attackCooldown = this.attackSpeed;
-                }
-            }
-        }
-        takeDamage(amount) {
-            this.hp -= amount;
-            if (this.hp <= 0) {
-                this.hp = 0; this.dead = true;
-                createExplosion(this.x, this.y, 30, '#555');
-                checkWinCondition();
-            }
-        }
-    }
-    
-    class Unit {
-        constructor(x, y, team, cardData) {
-            this.x = x; this.y = y; this.team = team;
-            this.stats = cardData;
-            this.hp = cardData.hp; this.maxHp = cardData.hp;
-            this.radius = 12;
-            this.state = 'move';
-            this.target = null;
-            this.attackCooldown = 0;
-            this.speedMod = 0.9 + Math.random() * 0.2; 
-        }
-        update(dt) {
-            if (this.hp <= 0) return;
-            if (this.attackCooldown > 0) this.attackCooldown -= dt;
-            
-            let enemyTarget = null;
-            if (this.stats.type === 'building_target') {
-                enemyTarget = getNearestTower(this.x, this.y, this.team);
-            } else {
-                enemyTarget = getNearestEnemy(this.x, this.y, this.team);
-            }
-            this.target = enemyTarget;
-            
-            if (this.target) {
-                let dist = getDistance(this.x, this.y, this.target.x, this.target.y);
-                let range = this.stats.range;
-                let targetRadius = this.target.radius || 20;
+            <!-- Game UI Overlay -->
+            <div id="game-ui">
+                <!-- Timer -->
+                <div id="game-timer">3:00</div>
                 
-                if (dist <= range + targetRadius) {
-                    this.state = 'attack';
-                    if (this.attackCooldown <= 0) {
-                        this.attack();
-                        this.attackCooldown = this.stats.attackSpeed;
-                    }
-                } else {
-                    this.state = 'move';
-                    let angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
-                    let speed = this.stats.speed * this.speedMod;
-                    this.x += Math.cos(angle) * speed * dt;
-                    this.y += Math.sin(angle) * speed * dt;
-                }
-            } else {
-                this.state = 'move';
-                let dir = this.team === TEAM_PLAYER ? -1 : 1;
-                this.y += this.stats.speed * this.speedMod * dt * dir;
-            }
-            
-            // Separation
-            for (let other of entities) {
-                if (other !== this && other.hp > 0) {
-                    let d = getDistance(this.x, this.y, other.x, other.y);
-                    if (d < this.radius + other.radius) {
-                        let angle = Math.atan2(this.y - other.y, this.x - other.x);
-                        let push = 50 * dt; 
-                        this.x += Math.cos(angle) * push;
-                        this.y += Math.sin(angle) * push;
-                    }
-                }
-            }
-        }
-        attack() {
-            if (this.stats.type === 'ranged') {
-                shootProjectile(this, this.target);
-            } else {
-                // Melee Splash check
-                if (this.stats.splash && this.stats.splash > 0) {
-                     createParticles(this.target.x, this.target.y, 3, '#fff');
-                     // Splash logic
-                     dealSplashDamage(this.x, this.y, this.stats.splash, this.stats.dmg, this.team);
-                } else {
-                    createParticles(this.target.x, this.target.y, 3, '#fff');
-                    this.target.takeDamage(this.stats.dmg);
-                }
-            }
-        }
-        takeDamage(amount) {
-            this.hp -= amount;
-            if (this.hp <= 0) createParticles(this.x, this.y, 8, this.team === TEAM_PLAYER ? '#6daee4' : '#ff5555');
-        }
-    }
-    
-    class Projectile {
-        constructor(x, y, target, damage, team, splashRadius) {
-            this.x = x; this.y = y; this.target = target;
-            this.damage = damage; this.team = team;
-            this.splashRadius = splashRadius || 0;
-            this.speed = 350; this.hit = false;
-            this.color = (splashRadius > 0) ? '#ffaa00' : (team === TEAM_PLAYER ? 'cyan' : 'orange');
-        }
-        update(dt) {
-            if (this.hit) return;
-            let targetExists = this.target && (this.target.hp > 0 || (this.target.maxHp && !this.target.dead));
-            if (targetExists) {
-                let angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
-                this.x += Math.cos(angle) * this.speed * dt;
-                this.y += Math.sin(angle) * this.speed * dt;
-                if (getDistance(this.x, this.y, this.target.x, this.target.y) < 15) this.impact();
-            } else { this.hit = true; }
-        }
-        impact() {
-            this.hit = true;
-            if (this.splashRadius > 0) {
-                createExplosion(this.x, this.y, 10, '#ffaa00');
-                dealSplashDamage(this.x, this.y, this.splashRadius, this.damage, this.team);
-            } else {
-                this.target.takeDamage(this.damage);
-                createParticles(this.x, this.y, 4, this.color);
-            }
-        }
-    }
-    
-    class Particle {
-        constructor(x, y, color) {
-            this.x = x; this.y = y; this.color = color;
-            this.size = Math.random() * 4 + 2; this.life = 1.0;
-            let angle = Math.random() * Math.PI * 2;
-            let speed = Math.random() * 60 + 20;
-            this.vx = Math.cos(angle) * speed;
-            this.vy = Math.sin(angle) * speed;
-        }
-        update(dt) {
-            this.x += this.vx * dt; this.y += this.vy * dt;
-            this.life -= dt * 2.5; this.size *= 0.95;
-        }
-    }
+                <!-- Player Info (Top - Enemy) -->
+                <div id="enemy-info" class="game-player-info top">
+                    <span class="player-name" id="enemy-name">Enemy</span>
+                    <div class="tower-count">
+                        <span id="enemy-towers">🏰🏰🏰</span>
+                    </div>
+                </div>
+                
+                <!-- Player Info (Bottom - You) -->
+                <div id="player-info-game" class="game-player-info bottom">
+                    <span class="player-name" id="your-name">You</span>
+                    <div class="tower-count">
+                        <span id="your-towers">🏰🏰🏰</span>
+                    </div>
+                </div>
+                
+                <!-- Elixir Bar -->
+                <div id="elixir-container">
+                    <div id="elixir-bar">
+                        <div id="elixir-fill"></div>
+                    </div>
+                    <span id="elixir-count">0</span>
+                    <span class="elixir-icon">💧</span>
+                </div>
+                
+                <!-- Card Hand -->
+                <div id="card-hand">
+                    <div id="next-card" class="card-slot next">
+                        <span class="card-label">Next</span>
+                    </div>
+                    <div id="active-cards" class="active-cards"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    // --- UTILS ---
-    function getDistance(x1, y1, x2, y2) { return Math.hypot(x2 - x1, y2 - y1); }
-    
-    function getNearestEnemy(x, y, myTeam) {
-        let nearest = null; let minDist = Infinity;
-        entities.forEach(e => {
-            if (e.team !== myTeam && e.hp > 0) {
-                let d = getDistance(x, y, e.x, e.y);
-                if (d < minDist) { minDist = d; nearest = e; }
-            }
-        });
-        if (!nearest || minDist > 200) { 
-             towers.forEach(t => {
-                if (t.team !== myTeam && !t.dead) {
-                    let d = getDistance(x, y, t.x, t.y);
-                    if (d < minDist) { minDist = d; nearest = t; }
-                }
-            });
-        }
-        return nearest;
-    }
+    <!-- Game Result Modal -->
+    <div id="result-modal" class="modal">
+        <div class="modal-content result-content">
+            <h2 id="result-title">Victory!</h2>
+            <div class="result-stats">
+                <div class="result-crowns">
+                    <span id="your-crowns">⭐⭐⭐</span>
+                    <span>-</span>
+                    <span id="enemy-crowns">⭐</span>
+                </div>
+                <div class="result-trophies">
+                    <span id="trophy-change">+30 🏆</span>
+                </div>
+            </div>
+            <button id="result-ok" class="btn-primary">OK</button>
+        </div>
+    </div>
 
-    function getNearestTower(x, y, myTeam) {
-        let nearest = null; let minDist = Infinity;
-        towers.forEach(t => {
-            if (t.team !== myTeam && !t.dead) {
-                let d = getDistance(x, y, t.x, t.y);
-                if (d < minDist) { minDist = d; nearest = t; }
-            }
-        });
-        return nearest;
-    }
-    
-    function dealSplashDamage(x, y, radius, damage, myTeam) {
-        // Cek Units
-        entities.forEach(e => {
-            if (e.team !== myTeam && e.hp > 0) {
-                if (getDistance(x, y, e.x, e.y) <= radius) e.takeDamage(damage);
-            }
-        });
-        // Cek Towers
-        towers.forEach(t => {
-            if (t.team !== myTeam && !t.dead) {
-                if (getDistance(x, y, t.x, t.y) <= radius) t.takeDamage(damage);
-            }
-        });
-    }
-
-    function shootProjectile(source, target) {
-        let splash = (source.stats && source.stats.splash) ? source.stats.splash : 0;
-        // FIX: Lebih aman mengecek damage
-        let dmg = 0;
-        if (source.damage) {
-            dmg = source.damage;
-        } else if (source.stats && source.stats.dmg) {
-            dmg = source.stats.dmg;
-        }
-        projectiles.push(new Projectile(source.x, source.y, target, dmg, source.team, splash));
-    }
-    
-    function createParticles(x, y, count, color) {
-        for(let i=0; i<count; i++) particles.push(new Particle(x, y, color));
-    }
-    function createExplosion(x, y, count, color) {
-        for(let i=0; i<count; i++) {
-            let p = new Particle(x, y, color);
-            p.vx *= 2; p.vy *= 2; 
-            particles.push(p);
-        }
-    }
-    
-    function spawnUnit(cardData, x, y, team) {
-        // Elixir Check
-        if (team === TEAM_PLAYER) {
-            if (playerElixir < cardData.cost) return false;
-            playerElixir -= cardData.cost;
-        } else {
-            if (enemyElixir < cardData.cost) return false;
-            enemyElixir -= cardData.cost;
-        }
-        
-        let count = cardData.count || 1;
-        for(let i=0; i<count; i++) {
-            let offsetX = (Math.random() - 0.5) * 40; 
-            let offsetY = (Math.random() - 0.5) * 40;
-            if(count === 1) { offsetX = 0; offsetY = 0; }
-            entities.push(new Unit(x + offsetX, y + offsetY, team, cardData));
-        }
-        return true;
-    }
-
-    // --- INPUT HANDLING ---
-    function selectGameCard(index) {
-        if (gameOver) return;
-        if (selectedCardIndex === index) selectedCardIndex = -1;
-        else selectedCardIndex = index;
-        updateUI();
-    }
-    
-    function handleInput(e) {
-        if (gameOver || selectedCardIndex === -1) return;
-        
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = GAME_WIDTH / rect.width;
-        const scaleY = GAME_HEIGHT / rect.height;
-        const clickX = (e.clientX - rect.left) * scaleX;
-        const clickY = (e.clientY - rect.top) * scaleY;
-        
-        // Spawn Player Unit
-        if (clickY > GAME_HEIGHT / 2) { 
-             const cardToSpawn = playerDeck[selectedCardIndex];
-             if (spawnUnit(cardToSpawn, clickX, clickY, TEAM_PLAYER)) {
-                 selectedCardIndex = -1; 
-                 updateUI();
-             }
-        } else {
-            createParticles(clickX, clickY, 5, '#ff0000');
-        }
-    }
-    
-    canvas.addEventListener('mousedown', handleInput);
-    canvas.addEventListener('touchstart', (e) => {
-        if(e.touches.length > 0) handleInput(e.touches[0]);
-    }, {passive: false});
-
-    // --- UI UPDATER ---
-    function updateUI() {
-        const pct = (playerElixir / MAX_ELIXIR) * 100;
-        document.getElementById('elixir-fill').style.width = pct + '%';
-        document.getElementById('elixir-value').innerText = Math.floor(playerElixir);
-        
-        // Loop through the PLAYER DECK (not ALL_CARDS)
-        for(let i=0; i<playerDeck.length; i++) {
-            const el = document.getElementById('game-card-'+i);
-            if (!el) continue;
-            
-            const cost = playerDeck[i].cost;
-            el.classList.remove('active', 'disabled');
-            
-            if (playerElixir < cost) el.classList.add('disabled');
-            if (selectedCardIndex === i) el.classList.add('active');
-        }
-        
-        let min = Math.floor(gameTime / 60);
-        let sec = Math.floor(gameTime % 60);
-        let timeStr = `0${min}:${sec < 10 ? '0'+sec : sec}`;
-        document.getElementById('game-timer').innerText = timeStr;
-    }
-
-    // --- GAME LOGIC LOOP ---
-    function checkWinCondition() {
-        let playerKing = towers.find(t => t.team === TEAM_PLAYER && t.type === 'king');
-        let enemyKing = towers.find(t => t.team === TEAM_ENEMY && t.type === 'king');
-        if (playerKing.dead) endGame(false);
-        else if (enemyKing.dead) endGame(true);
-    }
-
-    function endGame(playerWon) {
-        gameOver = true;
-        const overlay = document.getElementById('message-overlay');
-        const title = document.getElementById('result-title');
-        const icon = document.getElementById('result-icon');
-        overlay.style.display = 'block';
-        if (playerWon) {
-            title.innerText = "MENANG!";
-            title.style.color = "#fccb00";
-            icon.innerText = "👑";
-        } else {
-            title.innerText = "KALAH!";
-            title.style.color = "#ff5555";
-            icon.innerText = "☠️";
-        }
-    }
-    
-    function updateAI(dt) {
-        aiSpawnTimer += dt;
-        let spawnThreshold = 2.5; 
-        if (enemyElixir > 8) spawnThreshold = 1.0;
-        
-        if (aiSpawnTimer > spawnThreshold) {
-            aiSpawnTimer = 0;
-            if (enemyElixir >= 3) {
-                // AI can pick from ALL CARDS for variety
-                let affordableCards = ALL_CARDS.filter(c => c.cost <= enemyElixir);
-                if (affordableCards.length > 0) {
-                    let choice = affordableCards[Math.floor(Math.random() * affordableCards.length)];
-                    let lanes = [100, GAME_WIDTH - 100];
-                    let randX = lanes[Math.floor(Math.random() * lanes.length)] + (Math.random() * 60 - 30);
-                    let randY = 180; 
-                    spawnUnit(choice, randX, randY, TEAM_ENEMY);
-                }
-            }
-        }
-    }
-
-    function gameLoop(timestamp) {
-        if (!lastTime) lastTime = timestamp;
-        let dt = (timestamp - lastTime) / 1000;
-        lastTime = timestamp;
-        if (dt > 0.1) dt = 0.1;
-
-        if (!gameOver && !isPaused) {
-            gameTime -= dt;
-            if (gameTime <= 0) {
-                endGame(false); 
-                document.getElementById('result-title').innerText = "SERI!";
-            }
-            if (playerElixir < MAX_ELIXIR) playerElixir += ELIXIR_REGEN_RATE * dt;
-            if (enemyElixir < MAX_ELIXIR) enemyElixir += ELIXIR_REGEN_RATE * dt;
-            
-            updateAI(dt);
-            entities.forEach(e => e.update(dt));
-            entities = entities.filter(e => e.hp > 0);
-            towers.forEach(t => t.update(dt));
-            projectiles.forEach(p => p.update(dt));
-            projectiles = projectiles.filter(p => !p.hit);
-            updateUI();
-        }
-
-        particles.forEach(p => p.update(dt));
-        particles = particles.filter(p => p.life > 0);
-        draw();
-        requestAnimationFrame(gameLoop);
-    }
-    
-    function draw() {
-        ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-        
-        // Arena Background
-        ctx.fillStyle = '#5D9634';
-        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-        ctx.fillStyle = 'rgba(0,0,0,0.05)';
-        let tileSize = 40;
-        for(let y=0; y<GAME_HEIGHT; y+=tileSize) {
-            for(let x=0; x<GAME_WIDTH; x+=tileSize) {
-                if ((x/tileSize + y/tileSize) % 2 === 0) ctx.fillRect(x, y, tileSize, tileSize);
-            }
-        }
-        
-        // River
-        let riverY = GAME_HEIGHT/2 - 25;
-        let grad = ctx.createLinearGradient(0, riverY, 0, riverY+50);
-        grad.addColorStop(0, '#4CA1E7'); grad.addColorStop(0.5, '#6ec1ff'); grad.addColorStop(1, '#4CA1E7');
-        ctx.fillStyle = grad; ctx.fillRect(0, riverY, GAME_WIDTH, 50);
-        ctx.fillStyle = '#8B5A2B';
-        ctx.fillRect(0, riverY-5, GAME_WIDTH, 5); ctx.fillRect(0, riverY+50, GAME_WIDTH, 5);
-        
-        // Bridges
-        ctx.fillStyle = '#654321';
-        let bridgeW = 60; let bridgeH = 60;
-        ctx.fillRect(80 - bridgeW/2, GAME_HEIGHT/2 - 30, bridgeW, bridgeH);
-        ctx.fillRect(GAME_WIDTH - 80 - bridgeW/2, GAME_HEIGHT/2 - 30, bridgeW, bridgeH);
-        ctx.fillStyle = '#503010';
-        for(let i=0; i<6; i++) {
-            ctx.fillRect(80 - bridgeW/2, GAME_HEIGHT/2 - 25 + i*10, bridgeW, 2);
-            ctx.fillRect(GAME_WIDTH - 80 - bridgeW/2, GAME_HEIGHT/2 - 25 + i*10, bridgeW, 2);
-        }
-
-        // Towers
-        towers.forEach(t => {
-            ctx.fillStyle = 'rgba(0,0,0,0.4)';
-            ctx.beginPath();
-            ctx.ellipse(t.x, t.y + 10, t.width/1.5, t.width/3, 0, 0, Math.PI*2);
-            ctx.fill();
-
-            if (t.dead) {
-                ctx.fillStyle = '#555';
-                ctx.beginPath(); ctx.moveTo(t.x - 20, t.y + 20); ctx.lineTo(t.x, t.y - 10); ctx.lineTo(t.x + 20, t.y + 20); ctx.fill();
-            } else {
-                ctx.fillStyle = t.team === TEAM_PLAYER ? '#3d8eff' : '#ff4d4d';
-                ctx.fillRect(t.x - t.width/2, t.y - t.height/2, t.width, t.height);
-                ctx.fillStyle = '#fff'; if (t.team === TEAM_ENEMY) ctx.fillStyle = '#ffcccc';
-                ctx.fillRect(t.x - t.width/2, t.y - t.height/2, 10, 10);
-                ctx.fillRect(t.x + t.width/2 - 10, t.y - t.height/2, 10, 10);
-                drawHpBar(t.x, t.y - t.height/2 - 12, t.width, t.hp, t.maxHp);
-            }
-        });
-        
-        // Entities
-        entities.sort((a,b) => a.y - b.y);
-        entities.forEach(e => {
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.beginPath(); ctx.ellipse(e.x, e.y + 2, e.radius, e.radius * 0.4, 0, 0, Math.PI*2); ctx.fill();
-            
-            let color = e.team === TEAM_PLAYER ? '#6daee4' : '#ff5555';
-            ctx.fillStyle = color; ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(e.x, e.y - 5, e.radius, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-            
-            ctx.fillStyle = '#fff'; ctx.font = '14px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(e.stats.icon, e.x, e.y - 5);
-            drawHpBar(e.x, e.y - e.radius - 12, 24, e.hp, e.stats.hp);
-        });
-        
-        // Projectiles
-        projectiles.forEach(p => {
-            ctx.fillStyle = p.color; ctx.shadowBlur = 5; ctx.shadowColor = p.color;
-            ctx.beginPath();
-            if (p.splashRadius > 0) ctx.arc(p.x, p.y, 6, 0, Math.PI*2);
-            else ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
-            ctx.fill(); ctx.shadowBlur = 0;
-        });
-
-        // Particles
-        particles.forEach(p => {
-            ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
-            ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
-            ctx.globalAlpha = 1.0;
-        });
-    }
-    
-    function drawHpBar(x, y, w, val, max) {
-        ctx.fillStyle = '#111'; ctx.beginPath(); ctx.roundRect(x - w/2, y, w, 6, 3); ctx.fill();
-        let pct = Math.max(0, val / max);
-        let c = '#4cd137'; if (pct < 0.5) c = '#fbc531'; if (pct < 0.25) c = '#e84118';
-        ctx.fillStyle = c;
-        if (pct > 0) { ctx.beginPath(); ctx.roundRect(x - w/2 + 1, y + 1, (w - 2) * pct, 4, 2); ctx.fill(); }
-    }
-
-    // Initialize Menu
-    initMenu();
-    // Start loop (will run but game paused until Start clicked)
-    requestAnimationFrame(gameLoop);
-    
-</script>
-
+    <!-- Scripts -->
+    <script src="js/config/firebase-config.js"></script>
+    <script src="js/config/game-config.js"></script>
+    <script src="js/config/cards-data.js"></script>
+    <script src="js/services/firebase-service.js"></script>
+    <script src="js/services/auth-service.js"></script>
+    <script src="js/services/matchmaking-service.js"></script>
+    <script src="js/game/utils.js"></script>
+    <script src="js/game/entity.js"></script>
+    <script src="js/game/troop.js"></script>
+    <script src="js/game/tower.js"></script>
+    <script src="js/game/projectile.js"></script>
+    <script src="js/game/arena.js"></script>
+    <script src="js/game/game-engine.js"></script>
+    <script src="js/game/ai-opponent.js"></script>
+    <script src="js/ui/screens.js"></script>
+    <script src="js/ui/deck-builder.js"></script>
+    <script src="js/ui/game-ui.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
