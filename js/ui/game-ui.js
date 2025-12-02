@@ -186,12 +186,18 @@ const GameUI = {
      * Handle game end
      */
     onGameEnd(gameState) {
+        // Disable leave protection since game is over
+        if (window.ScreenManager && window.ScreenManager.disableBattleLeaveProtection) {
+            window.ScreenManager.disableBattleLeaveProtection();
+        }
+        
         const modal = document.getElementById('result-modal');
         if (!modal) return;
 
         // Determine result
         const isWin = gameState.winner === 'player';
         const isDraw = gameState.winner === 'draw';
+        const isSurrender = gameState.surrendered === true;
 
         // Update modal content
         const title = document.getElementById('result-title');
@@ -206,6 +212,9 @@ const GameUI = {
             } else if (isWin) {
                 title.textContent = 'Victory!';
                 title.className = 'victory';
+            } else if (isSurrender) {
+                title.textContent = 'Surrendered';
+                title.className = 'defeat';
             } else {
                 title.textContent = 'Defeat';
                 title.className = 'defeat';

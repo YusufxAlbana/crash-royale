@@ -1126,6 +1126,28 @@ class GameEngine {
     deselectCard() {
         this.playerState.selectedCard = null;
     }
+
+    /**
+     * Surrender - player gives up and loses the match
+     */
+    surrender() {
+        if (!this.gameState.isRunning) return;
+        
+        console.log('Player surrendered!');
+        
+        // Set winner to enemy
+        this.gameState.winner = 'enemy';
+        this.gameState.surrendered = true;
+        
+        // Give enemy 3 crowns (full victory)
+        this.gameState.enemyCrowns = 3;
+        
+        // Show surrender message
+        this.showMessage('You Surrendered!');
+        
+        // End the game
+        this.endGame();
+    }
 }
 
 // Export

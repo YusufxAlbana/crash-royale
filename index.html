@@ -505,6 +505,9 @@
                     <!-- Timer -->
                     <div id="game-timer">3:00</div>
                     
+                    <!-- Mobile Surrender Button (visible on small screens) -->
+                    <button id="mobile-surrender-btn">🏳️ Surrender</button>
+                    
                     <!-- Elixir Bar -->
                     <div id="elixir-container">
                         <div id="elixir-bar">
@@ -551,6 +554,10 @@
                         <span class="stat-value" id="enemy-troop-count">0</span>
                     </div>
                 </div>
+                <div class="panel-divider"></div>
+                <div class="panel-section surrender-section">
+                    <button id="surrender-btn" class="btn-surrender">🏳️ Surrender</button>
+                </div>
             </div>
         </div>
     </div>
@@ -570,6 +577,18 @@
                 </div>
             </div>
             <button id="result-ok" class="btn-primary">OK</button>
+        </div>
+    </div>
+
+    <!-- Surrender Confirmation Modal -->
+    <div id="surrender-modal" class="modal">
+        <div class="modal-content surrender-content">
+            <h2>🏳️ Surrender?</h2>
+            <p>Are you sure you want to surrender? This will count as a loss.</p>
+            <div class="modal-buttons">
+                <button id="confirm-surrender" class="btn-danger">Yes, Surrender</button>
+                <button id="cancel-surrender" class="btn-secondary">Cancel</button>
+            </div>
         </div>
     </div>
 

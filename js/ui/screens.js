@@ -134,6 +134,8 @@ const ScreenManager = {
         // Result modal
         document.getElementById('result-ok')?.addEventListener('click', () => {
             document.getElementById('result-modal').classList.remove('active');
+            // Ensure protection is disabled when returning to menu
+            this.disableBattleLeaveProtection();
             this.showScreen('menu');
         });
 
@@ -222,8 +224,200 @@ const ScreenManager = {
             GameUI.init(window.gameEngine);
         }
         
+        // Enable leave/refresh prevention
+        this.enableBattleLeaveProtection();
+        
+        // Setup surrender button
+        this.setupSurrenderButton();
+        
         // Start game
         window.gameEngine.start();
+    },
+    
+    /**
+     * Start friend battle (PvP with friend)
+     */
+    startFriendBattle(friend, isHost) {
+        this.showScreen('game');
+        
+        // Update enemy name
+        const enemyNameEl = document.getElementById('enemy-name');
+        if (enemyNameEl) enemyNameEl.textContent = friend.username;
+        
+        // Initialize game
+        if (!window.gameEngine) {
+            window.gameEngine = new GameEngine();
+        }
+        
+        // Get player deck
+        let playerDeck = [...DefaultDeck];
+        
+        if (window.AuthService && AuthService.userProfile && AuthService.userProfile.deck) {
+            playerDeck = [...AuthService.userProfile.deck];
+        } else if (window.currentUser && window.currentUser.deck) {
+            playerDeck = [...window.currentUser.deck];
+        }
+        
+        // Validate deck
+        playerDeck = playerDeck.filter(cardId => getCardById(cardId) !== null);
+        
+        while (playerDeck.length < 8) {
+            const allCards = Object.keys(CardsData);
+            const available = allCards.filter(c => !playerDeck.includes(c));
+            if (available.length > 0) {
+                playerDeck.push(available[0]);
+            } else {
+                break;
+            }
+        }
+        
+        console.log('Starting friend battle with:', friend.username, 'isHost:', isHost);
+        
+        // Initialize game - for now use AI but mark as friend battle
+        // TODO: Implement real-time PvP sync
+        window.gameEngine.init(playerDeck, true); // Still use AI for opponent logic
+        window.gameEngine.isFriendBattle = true;
+        window.gameEngine.friendOpponent = friend;
+        
+        // Setup card hand UI
+        if (window.GameUI) {
+            GameUI.init(window.gameEngine);
+        }
+        
+        // Enable leave/refresh prevention
+        this.enableBattleLeaveProtection();
+        
+        // Setup surrender button
+        this.setupSurrenderButton();
+        
+        // Start game
+        window.gameEngine.start();
+    },
+    
+    /**
+     * Enable protection against leaving/refreshing during battle
+     */
+    enableBattleLeaveProtection() {
+        // Flag to track if we're in battle
+        this.isInBattle = true;
+        
+        // Store the handler so we can remove it later
+        this.beforeUnloadHandler = (e) => {
+            if (this.isInBattle && window.gameEngine && window.gameEngine.gameState.isRunning) {
+                // Show browser warning - this is the standard way
+                const message = 'You are in a battle! Leaving will count as a surrender.';
+                e.preventDefault();
+                e.returnValue = message;
+                return message;
+            }
+        };
+        
+        // Add the beforeunload listener
+        window.addEventListener('beforeunload', this.beforeUnloadHandler);
+        
+        // Handle page unload (when user confirms leaving)
+        this.unloadHandler = () => {
+            if (this.isInBattle && window.gameEngine && window.gameEngine.gameState.isRunning) {
+                // Try to surrender before leaving
+                window.gameEngine.surrender();
+            }
+        };
+        
+        window.addEventListener('unload', this.unloadHandler);
+        
+        // Handle browser back button
+        this.popstateHandler = (e) => {
+            if (this.isInBattle && window.gameEngine && window.gameEngine.gameState.isRunning) {
+                // Prevent going back
+                history.pushState(null, '', window.location.href);
+                // Show surrender modal instead
+                const surrenderModal = document.getElementById('surrender-modal');
+                if (surrenderModal) {
+                    surrenderModal.classList.add('active');
+                }
+            }
+        };
+        
+        // Push a state so we can detect back button
+        history.pushState(null, '', window.location.href);
+        window.addEventListener('popstate', this.popstateHandler);
+        
+        console.log('Battle leave protection enabled');
+    },
+    
+    /**
+     * Disable battle leave protection
+     */
+    disableBattleLeaveProtection() {
+        this.isInBattle = false;
+        
+        if (this.beforeUnloadHandler) {
+            window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+            this.beforeUnloadHandler = null;
+        }
+        
+        if (this.unloadHandler) {
+            window.removeEventListener('unload', this.unloadHandler);
+            this.unloadHandler = null;
+        }
+        
+        if (this.popstateHandler) {
+            window.removeEventListener('popstate', this.popstateHandler);
+            this.popstateHandler = null;
+        }
+        
+        console.log('Battle leave protection disabled');
+    },
+    
+    /**
+     * Setup surrender button and modal
+     */
+    setupSurrenderButton() {
+        const surrenderBtn = document.getElementById('surrender-btn');
+        const mobileSurrenderBtn = document.getElementById('mobile-surrender-btn');
+        const surrenderModal = document.getElementById('surrender-modal');
+        const confirmSurrender = document.getElementById('confirm-surrender');
+        const cancelSurrender = document.getElementById('cancel-surrender');
+        
+        // Function to show surrender modal
+        const showSurrenderModal = () => {
+            if (surrenderModal) {
+                surrenderModal.classList.add('active');
+            }
+        };
+        
+        // Desktop surrender button
+        if (surrenderBtn) {
+            surrenderBtn.onclick = showSurrenderModal;
+        }
+        
+        // Mobile surrender button
+        if (mobileSurrenderBtn) {
+            mobileSurrenderBtn.onclick = showSurrenderModal;
+        }
+        
+        if (confirmSurrender) {
+            confirmSurrender.onclick = () => {
+                // Hide modal
+                if (surrenderModal) {
+                    surrenderModal.classList.remove('active');
+                }
+                
+                // Execute surrender
+                if (window.gameEngine) {
+                    window.gameEngine.surrender();
+                }
+            };
+        }
+        
+        if (cancelSurrender) {
+            cancelSurrender.onclick = () => {
+                // Just hide modal
+                if (surrenderModal) {
+                    surrenderModal.classList.remove('active');
+                }
+            };
+        }
     },
 
     /**

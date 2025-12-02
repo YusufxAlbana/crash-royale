@@ -731,3 +731,43 @@
         bottom: 120px;
     }
 }
+
+
+/* ============================================
+   SURRENDER SECTION
+   ============================================ */
+
+.surrender-section {
+    margin-top: auto;
+    padding-top: 1rem;
+}
+
+/* Mobile: Show surrender button in game UI when side panels are hidden */
+@media (max-width: 800px) {
+    #mobile-surrender-btn {
+        display: block;
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 100;
+        padding: 0.5rem 0.75rem;
+        background: linear-gradient(135deg, #d32f2f, #b71c1c);
+        border: 2px solid #f44336;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(211, 47, 47, 0.5);
+    }
+    
+    #mobile-surrender-btn:active {
+        transform: scale(0.95);
+    }
+}
+
+@media (min-width: 801px) {
+    #mobile-surrender-btn {
+        display: none;
+    }
+}

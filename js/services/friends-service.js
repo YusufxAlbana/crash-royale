@@ -28,6 +28,7 @@ const FriendsService = {
         // Listen for real-time updates if online
         if (this.isOnline) {
             this.setupRealtimeListeners();
+            this.setupBattleInviteListener();
         }
     },
 
@@ -1042,20 +1043,384 @@ const FriendsService = {
     },
 
     /**
-     * Battle friend
+     * Battle friend - send battle invite
      */
-    battleFriend(friend) {
+    async battleFriend(friend) {
         if (!friend.online) {
             alert(`${friend.username} is offline`);
             return;
         }
         
-        // Send battle invite in chat
-        if (!this.chats[friend.id]) {
-            this.chats[friend.id] = { messages: [], unread: 0 };
+        if (!this.isOnline) {
+            alert('Friend battles require online mode');
+            return;
         }
         
-        alert(`Battle invite sent to ${friend.username}!\n\n(Friend battles coming soon)`);
+        // Show waiting modal
+        this.showBattleInviteWaiting(friend);
+        
+        try {
+            const db = FirebaseConfig.getDb();
+            const userKey = window.currentUser.username.toLowerCase();
+            const friendKey = friend.id || friend.username.toLowerCase();
+            
+            // Create battle invite in Firebase
+            const inviteId = `${userKey}_${friendKey}_${Date.now()}`;
+            
+            await db.collection('battleInvites').doc(inviteId).set({
+                from: userKey,
+                fromUsername: window.currentUser.username,
+                fromTrophies: window.currentUser.trophies || 0,
+                to: friendKey,
+                toUsername: friend.username,
+                status: 'pending',
+                timestamp: Date.now()
+            });
+            
+            // Store current invite ID
+            this.currentBattleInvite = inviteId;
+            this.isWaitingForBattleResponse = true;
+            
+            // Listen for response
+            this.battleInviteListener = db.collection('battleInvites').doc(inviteId)
+                .onSnapshot(doc => {
+                    if (!doc.exists) {
+                        // Invite was deleted (cancelled or expired)
+                        this.cancelBattleInvite(true);
+                        return;
+                    }
+                    
+                    const data = doc.data();
+                    
+                    if (data.status === 'accepted') {
+                        // Friend accepted! Start the battle
+                        this.startFriendBattle(friend, inviteId, true);
+                    } else if (data.status === 'declined') {
+                        // Friend declined
+                        this.hideBattleInviteWaiting();
+                        alert(`${friend.username} declined your battle invite`);
+                        this.cleanupBattleInvite();
+                    }
+                });
+            
+            // Setup navigation protection - cancel invite if player leaves
+            this.setupBattleInviteProtection();
+            
+            // Auto-cancel after 60 seconds
+            this.battleInviteTimeout = setTimeout(() => {
+                if (this.isWaitingForBattleResponse) {
+                    this.cancelBattleInvite();
+                    alert('Battle invite expired');
+                }
+            }, 60000);
+            
+        } catch (e) {
+            console.error('Error sending battle invite:', e);
+            this.hideBattleInviteWaiting();
+            alert('Failed to send battle invite');
+        }
+    },
+    
+    /**
+     * Setup protection to cancel invite if player navigates away
+     */
+    setupBattleInviteProtection() {
+        // Store original screen change handler
+        this.originalShowScreen = ScreenManager.showScreen.bind(ScreenManager);
+        
+        // Override showScreen to detect navigation
+        ScreenManager.showScreen = (screenName) => {
+            if (this.isWaitingForBattleResponse && screenName !== 'game') {
+                // Player is trying to navigate away while waiting
+                this.cancelBattleInvite();
+            }
+            this.originalShowScreen(screenName);
+        };
+        
+        // Also handle page unload
+        this.battleInviteUnloadHandler = () => {
+            if (this.isWaitingForBattleResponse) {
+                this.cancelBattleInvite();
+            }
+        };
+        window.addEventListener('beforeunload', this.battleInviteUnloadHandler);
+    },
+    
+    /**
+     * Remove battle invite protection
+     */
+    removeBattleInviteProtection() {
+        if (this.originalShowScreen) {
+            ScreenManager.showScreen = this.originalShowScreen;
+            this.originalShowScreen = null;
+        }
+        
+        if (this.battleInviteUnloadHandler) {
+            window.removeEventListener('beforeunload', this.battleInviteUnloadHandler);
+            this.battleInviteUnloadHandler = null;
+        }
+    },
+    
+    /**
+     * Show waiting for battle response modal
+     */
+    showBattleInviteWaiting(friend) {
+        let modal = document.getElementById('battle-invite-waiting-modal');
+        
+        if (!modal) {
+            // Create modal if doesn't exist
+            modal = document.createElement('div');
+            modal.id = 'battle-invite-waiting-modal';
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content battle-invite-content">
+                    <h2>⚔️ Battle Invite Sent</h2>
+                    <p>Waiting for <span id="invite-friend-name"></span> to respond...</p>
+                    <div class="loading-spinner"></div>
+                    <p class="invite-warning">⚠️ Don't leave this page or the invite will be cancelled!</p>
+                    <button id="cancel-battle-invite" class="btn-secondary">Cancel</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            document.getElementById('cancel-battle-invite').addEventListener('click', () => {
+                this.cancelBattleInvite();
+            });
+        }
+        
+        document.getElementById('invite-friend-name').textContent = friend.username;
+        modal.classList.add('active');
+    },
+    
+    /**
+     * Hide waiting modal
+     */
+    hideBattleInviteWaiting() {
+        const modal = document.getElementById('battle-invite-waiting-modal');
+        if (modal) modal.classList.remove('active');
+    },
+    
+    /**
+     * Cancel battle invite
+     */
+    async cancelBattleInvite(silent = false) {
+        this.hideBattleInviteWaiting();
+        this.removeBattleInviteProtection();
+        
+        if (this.battleInviteTimeout) {
+            clearTimeout(this.battleInviteTimeout);
+            this.battleInviteTimeout = null;
+        }
+        
+        if (this.battleInviteListener) {
+            this.battleInviteListener();
+            this.battleInviteListener = null;
+        }
+        
+        // Delete invite from Firebase
+        if (this.currentBattleInvite && this.isOnline) {
+            try {
+                const db = FirebaseConfig.getDb();
+                await db.collection('battleInvites').doc(this.currentBattleInvite).delete();
+            } catch (e) {
+                console.error('Error deleting battle invite:', e);
+            }
+        }
+        
+        this.currentBattleInvite = null;
+        this.isWaitingForBattleResponse = false;
+        
+        if (!silent) {
+            // Invite was cancelled by user action
+        }
+    },
+    
+    /**
+     * Cleanup battle invite state
+     */
+    cleanupBattleInvite() {
+        this.hideBattleInviteWaiting();
+        this.removeBattleInviteProtection();
+        
+        if (this.battleInviteTimeout) {
+            clearTimeout(this.battleInviteTimeout);
+            this.battleInviteTimeout = null;
+        }
+        
+        if (this.battleInviteListener) {
+            this.battleInviteListener();
+            this.battleInviteListener = null;
+        }
+        
+        this.currentBattleInvite = null;
+        this.isWaitingForBattleResponse = false;
+    },
+    
+    /**
+     * Listen for incoming battle invites
+     */
+    setupBattleInviteListener() {
+        if (!this.isOnline || !window.currentUser) return;
+        
+        const db = FirebaseConfig.getDb();
+        const userKey = window.currentUser.username.toLowerCase();
+        
+        // Listen for invites sent to this user
+        const unsubInvites = db.collection('battleInvites')
+            .where('to', '==', userKey)
+            .where('status', '==', 'pending')
+            .onSnapshot(snapshot => {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === 'added') {
+                        const invite = { id: change.doc.id, ...change.doc.data() };
+                        this.showIncomingBattleInvite(invite);
+                    } else if (change.type === 'removed') {
+                        // Invite was cancelled
+                        this.hideIncomingBattleInvite();
+                    }
+                });
+            });
+        
+        this.unsubscribers.push(unsubInvites);
+    },
+    
+    /**
+     * Show incoming battle invite modal
+     */
+    showIncomingBattleInvite(invite) {
+        this.currentIncomingInvite = invite;
+        
+        let modal = document.getElementById('incoming-battle-invite-modal');
+        
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'incoming-battle-invite-modal';
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content battle-invite-content">
+                    <h2>⚔️ Battle Invite!</h2>
+                    <div class="invite-from">
+                        <div class="invite-avatar">👤</div>
+                        <div class="invite-info">
+                            <span class="invite-name" id="incoming-invite-name"></span>
+                            <span class="invite-trophies" id="incoming-invite-trophies"></span>
+                        </div>
+                    </div>
+                    <p>wants to battle you!</p>
+                    <div class="modal-buttons">
+                        <button id="accept-battle-invite" class="btn-primary">⚔️ Accept</button>
+                        <button id="decline-battle-invite" class="btn-secondary">Decline</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            document.getElementById('accept-battle-invite').addEventListener('click', () => {
+                this.acceptBattleInvite();
+            });
+            
+            document.getElementById('decline-battle-invite').addEventListener('click', () => {
+                this.declineBattleInvite();
+            });
+        }
+        
+        document.getElementById('incoming-invite-name').textContent = invite.fromUsername;
+        document.getElementById('incoming-invite-trophies').textContent = `🏆 ${invite.fromTrophies}`;
+        modal.classList.add('active');
+        
+        // Play sound or vibrate
+        if (navigator.vibrate) {
+            navigator.vibrate([200, 100, 200]);
+        }
+    },
+    
+    /**
+     * Hide incoming battle invite modal
+     */
+    hideIncomingBattleInvite() {
+        const modal = document.getElementById('incoming-battle-invite-modal');
+        if (modal) modal.classList.remove('active');
+        this.currentIncomingInvite = null;
+    },
+    
+    /**
+     * Accept incoming battle invite
+     */
+    async acceptBattleInvite() {
+        if (!this.currentIncomingInvite) return;
+        
+        const invite = this.currentIncomingInvite;
+        this.hideIncomingBattleInvite();
+        
+        try {
+            const db = FirebaseConfig.getDb();
+            
+            // Update invite status to accepted
+            await db.collection('battleInvites').doc(invite.id).update({
+                status: 'accepted'
+            });
+            
+            // Start battle as player 2
+            const friend = {
+                id: invite.from,
+                username: invite.fromUsername,
+                trophies: invite.fromTrophies
+            };
+            
+            this.startFriendBattle(friend, invite.id, false);
+            
+        } catch (e) {
+            console.error('Error accepting battle invite:', e);
+            alert('Failed to accept battle invite');
+        }
+    },
+    
+    /**
+     * Decline incoming battle invite
+     */
+    async declineBattleInvite() {
+        if (!this.currentIncomingInvite) return;
+        
+        const invite = this.currentIncomingInvite;
+        this.hideIncomingBattleInvite();
+        
+        try {
+            const db = FirebaseConfig.getDb();
+            
+            // Update invite status to declined
+            await db.collection('battleInvites').doc(invite.id).update({
+                status: 'declined'
+            });
+            
+        } catch (e) {
+            console.error('Error declining battle invite:', e);
+        }
+    },
+    
+    /**
+     * Start friend battle
+     */
+    startFriendBattle(friend, inviteId, isHost) {
+        this.cleanupBattleInvite();
+        this.hideIncomingBattleInvite();
+        
+        console.log(`Starting friend battle with ${friend.username}, isHost: ${isHost}`);
+        
+        // Store battle info
+        window.currentFriendBattle = {
+            inviteId: inviteId,
+            opponent: friend,
+            isHost: isHost
+        };
+        
+        // Update enemy name in game UI
+        const enemyNameEl = document.getElementById('enemy-name');
+        if (enemyNameEl) enemyNameEl.textContent = friend.username;
+        
+        // Start the game
+        if (window.ScreenManager) {
+            ScreenManager.startFriendBattle(friend, isHost);
+        }
     },
 
     /**
