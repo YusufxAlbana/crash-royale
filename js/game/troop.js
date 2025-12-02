@@ -69,11 +69,9 @@ class Troop extends Entity {
             this.animationTimer = 0;
         }
 
-        // SELALU cari target setiap frame jika tidak punya target valid
-        if (!this.target || this.target.isDead || !this.target.isActive) {
-            this.target = null;
-            this.findTarget(gameState);
-        }
+        // SELALU cari target terdekat setiap frame
+        // Ini memastikan troop fokus ke musuh paling dekat
+        this.findClosestTarget(gameState);
 
         // Update based on state
         if (this.target && !this.target.isDead && this.target.isActive) {
@@ -109,14 +107,10 @@ class Troop extends Entity {
     }
     
     /**
-     * Find a target - LOCK ON sampai target mati
+     * Find closest target - SELALU cari yang paling dekat
+     * Troop akan ganti target jika ada musuh yang lebih dekat
      */
-    findTarget(gameState) {
-        // Jika sudah punya target yang masih hidup, jangan ganti
-        if (this.target && !this.target.isDead && this.target.isActive) {
-            return;
-        }
-        
+    findClosestTarget(gameState) {
         let bestTarget = null;
         let bestDistance = Infinity;
         
@@ -135,8 +129,7 @@ class Troop extends Entity {
                 }
             }
         } else {
-            // SEMUA troop yang target 'all' akan menyerang musuh terdekat
-            // TANPA batasan aggro range - akan selalu mengejar musuh
+            // Cari musuh TERDEKAT - selalu update target ke yang paling dekat
             for (const enemy of enemies) {
                 if (enemy.isDead || !enemy.isActive) continue;
                 const dist = this.distanceTo(enemy);
@@ -147,7 +140,7 @@ class Troop extends Entity {
                 }
             }
             
-            // Jika tidak ada troop musuh, cari tower
+            // Jika tidak ada troop musuh, cari tower terdekat
             if (!bestTarget) {
                 for (const tower of enemyTowers) {
                     if (tower.isDead || !tower.isActive) continue;
@@ -160,10 +153,16 @@ class Troop extends Entity {
             }
         }
         
-        // Set target baru (akan di-lock sampai mati)
+        // SELALU update target ke yang paling dekat
+        // Ini memastikan troop fokus ke musuh terdekat, bukan yang pertama ditemukan
         if (bestTarget) {
-            this.target = bestTarget;
-            this.lastRetargetTime = Date.now();
+            // Ganti target jika ada yang lebih dekat
+            if (this.target !== bestTarget) {
+                this.target = bestTarget;
+                this.lastRetargetTime = Date.now();
+            }
+        } else {
+            this.target = null;
         }
     }
 
