@@ -58,10 +58,17 @@ class Tower extends Entity {
             return; // Don't attack if not activated
         }
 
-        // Find target
-        this.findTarget(gameState);
+        // HANYA cari target baru jika tidak punya atau target sudah mati/keluar range
+        if (!this.target || this.target.isDead || !this.target.isActive) {
+            this.target = null;
+            this.findTarget(gameState);
+        } else if (!this.isInRange(this.target)) {
+            // Target keluar range, cari target baru
+            this.target = null;
+            this.findTarget(gameState);
+        }
 
-        // Attack if has target
+        // Attack if has target and in range
         if (this.target && !this.target.isDead && this.isInRange(this.target)) {
             if (this.canAttack(currentTime)) {
                 this.performAttack(this.target, currentTime, gameState);
@@ -100,16 +107,22 @@ class Tower extends Entity {
     }
 
     /**
-     * Find target for tower
+     * Find target for tower - LOCK ON sampai target mati atau keluar range
      */
     findTarget(gameState) {
+        // Jika sudah punya target yang valid dan dalam range, jangan ganti
+        if (this.target && !this.target.isDead && this.target.isActive && this.isInRange(this.target)) {
+            return;
+        }
+        
         const enemies = this.team === 'player' ? gameState.enemyTroops : gameState.playerTroops;
         
         let bestTarget = null;
         let bestDistance = Infinity;
         
+        // Cari musuh terdekat dalam range
         for (const enemy of enemies) {
-            if (enemy.isDead) continue;
+            if (enemy.isDead || !enemy.isActive) continue;
             
             const dist = this.distanceTo(enemy);
             if (dist <= this.range && dist < bestDistance) {
@@ -118,6 +131,7 @@ class Tower extends Entity {
             }
         }
         
+        // Set target baru (akan di-lock sampai mati atau keluar range)
         this.target = bestTarget;
     }
 

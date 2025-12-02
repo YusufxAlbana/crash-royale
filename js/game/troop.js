@@ -69,8 +69,10 @@ class Troop extends Entity {
             this.animationTimer = 0;
         }
 
-        // Find target if none
-        if (!this.target || this.target.isDead) {
+        // HANYA cari target baru jika tidak punya target atau target sudah mati
+        // Ini memastikan troop tetap fokus pada satu target
+        if (!this.target || this.target.isDead || !this.target.isActive) {
+            this.target = null; // Reset target
             this.findTarget(gameState);
         }
 
@@ -84,7 +86,7 @@ class Troop extends Entity {
             }
             
             if (this.isInRange(this.target)) {
-                // Attack
+                // Attack - tetap serang target yang sama
                 this.state = 'attacking';
                 this.attack(this.target, currentTime);
             } else {
@@ -93,8 +95,9 @@ class Troop extends Entity {
                 this.moveTowards(this.target, deltaTime);
             }
         } else {
-            // Move towards enemy base
-            this.moveTowardsBase(deltaTime);
+            // Tidak ada target, bergerak ke base musuh
+            this.state = 'moving';
+            this.moveTowardsBase(deltaTime, gameState);
         }
 
         // Handle collisions with other troops
@@ -102,17 +105,13 @@ class Troop extends Entity {
     }
 
     /**
-     * Find a target
+     * Find a target - LOCK ON sampai target mati
      */
     findTarget(gameState) {
-        const currentTime = Date.now();
-        
-        // Retarget cooldown
-        if (currentTime - this.lastRetargetTime < GameConfig.GAMEPLAY.RETARGET_COOLDOWN) {
+        // Jika sudah punya target yang masih hidup, jangan ganti
+        if (this.target && !this.target.isDead && this.target.isActive) {
             return;
         }
-        
-        this.lastRetargetTime = currentTime;
         
         let bestTarget = null;
         let bestDistance = Infinity;
@@ -123,8 +122,9 @@ class Troop extends Entity {
         
         // If targets buildings only, prioritize towers
         if (this.targets === 'buildings') {
+            // Cari tower terdekat yang masih hidup
             for (const tower of enemyTowers) {
-                if (tower.isDead) continue;
+                if (tower.isDead || !tower.isActive) continue;
                 const dist = this.distanceTo(tower);
                 if (dist < bestDistance) {
                     bestDistance = dist;
@@ -132,9 +132,9 @@ class Troop extends Entity {
                 }
             }
         } else {
-            // Check nearby enemy troops first (aggro range)
+            // Cari musuh terdekat dalam aggro range
             for (const enemy of enemies) {
-                if (enemy.isDead) continue;
+                if (enemy.isDead || !enemy.isActive) continue;
                 const dist = this.distanceTo(enemy);
                 if (dist <= GameConfig.GAMEPLAY.AGGRO_RANGE && dist < bestDistance) {
                     bestDistance = dist;
@@ -142,10 +142,10 @@ class Troop extends Entity {
                 }
             }
             
-            // If no nearby troops, target towers
+            // Jika tidak ada troop musuh dalam range, cari tower
             if (!bestTarget) {
                 for (const tower of enemyTowers) {
-                    if (tower.isDead) continue;
+                    if (tower.isDead || !tower.isActive) continue;
                     const dist = this.distanceTo(tower);
                     if (dist < bestDistance) {
                         bestDistance = dist;
@@ -155,7 +155,11 @@ class Troop extends Entity {
             }
         }
         
-        this.target = bestTarget;
+        // Set target baru (akan di-lock sampai mati)
+        if (bestTarget) {
+            this.target = bestTarget;
+            this.lastRetargetTime = Date.now();
+        }
     }
 
     /**
@@ -185,11 +189,18 @@ class Troop extends Entity {
     }
 
     /**
-     * Move towards enemy base
+     * Move towards enemy base - sambil cari target
      */
-    moveTowardsBase(deltaTime) {
-        const targetY = this.team === 'player' ? 50 : 590;
-        const dx = 0;
+    moveTowardsBase(deltaTime, gameState) {
+        // Coba cari target saat bergerak
+        if (gameState) {
+            this.findTarget(gameState);
+            if (this.target && !this.target.isDead) {
+                return; // Ada target, akan di-handle di update()
+            }
+        }
+        
+        const targetY = this.team === 'player' ? 60 : GameConfig.ARENA.HEIGHT - 60;
         const dy = targetY - this.y;
         const dist = Math.abs(dy);
         
@@ -341,6 +352,18 @@ class Troop extends Entity {
     draw(ctx) {
         if (!this.isActive) return;
 
+        // Draw line to target (jika sedang menyerang)
+        if (this.target && !this.target.isDead && this.state === 'attacking') {
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y);
+            ctx.lineTo(this.target.x, this.target.y);
+            ctx.strokeStyle = this.team === 'player' ? 'rgba(33, 150, 243, 0.3)' : 'rgba(244, 67, 54, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
         // Draw shadow
         ctx.beginPath();
         ctx.ellipse(this.x, this.y + this.size * 0.8, this.size * 0.8, this.size * 0.3, 0, 0, Math.PI * 2);
@@ -361,9 +384,9 @@ class Troop extends Entity {
         ctx.fillStyle = gradient;
         ctx.fill();
         
-        // Border
+        // Border - lebih tebal jika sedang menyerang
         ctx.strokeStyle = this.team === 'player' ? '#0d47a1' : '#b71c1c';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = this.state === 'attacking' ? 3 : 2;
         ctx.stroke();
 
         // Draw icon
