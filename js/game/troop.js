@@ -69,15 +69,14 @@ class Troop extends Entity {
             this.animationTimer = 0;
         }
 
-        // HANYA cari target baru jika tidak punya target atau target sudah mati
-        // Ini memastikan troop tetap fokus pada satu target
+        // SELALU cari target setiap frame jika tidak punya target valid
         if (!this.target || this.target.isDead || !this.target.isActive) {
-            this.target = null; // Reset target
+            this.target = null;
             this.findTarget(gameState);
         }
 
         // Update based on state
-        if (this.target && !this.target.isDead) {
+        if (this.target && !this.target.isDead && this.target.isActive) {
             const dist = this.distanceTo(this.target);
             
             // Check for charge ability
@@ -85,12 +84,17 @@ class Troop extends Entity {
                 this.startCharge();
             }
             
-            if (this.isInRange(this.target)) {
-                // Attack - tetap serang target yang sama
+            // Cek apakah dalam range untuk attack
+            const attackRange = this.range + (this.target.size || 0);
+            
+            if (dist <= attackRange) {
+                // DALAM RANGE - STOP dan ATTACK
                 this.state = 'attacking';
+                this.vx = 0;
+                this.vy = 0;
                 this.attack(this.target, currentTime);
             } else {
-                // Move towards target
+                // DILUAR RANGE - Move towards target
                 this.state = this.isCharging ? 'charging' : 'moving';
                 this.moveTowards(this.target, deltaTime);
             }
@@ -103,7 +107,7 @@ class Troop extends Entity {
         // Handle collisions with other troops
         this.handleCollisions(gameState);
     }
-
+    
     /**
      * Find a target - LOCK ON sampai target mati
      */
@@ -120,9 +124,8 @@ class Troop extends Entity {
         const enemies = this.team === 'player' ? gameState.enemyTroops : gameState.playerTroops;
         const enemyTowers = this.team === 'player' ? gameState.enemyTowers : gameState.playerTowers;
         
-        // If targets buildings only, prioritize towers
+        // If targets buildings only (like Giant, Hog Rider), go straight to towers
         if (this.targets === 'buildings') {
-            // Cari tower terdekat yang masih hidup
             for (const tower of enemyTowers) {
                 if (tower.isDead || !tower.isActive) continue;
                 const dist = this.distanceTo(tower);
@@ -132,17 +135,19 @@ class Troop extends Entity {
                 }
             }
         } else {
-            // Cari musuh terdekat dalam aggro range
+            // SEMUA troop yang target 'all' akan menyerang musuh terdekat
+            // TANPA batasan aggro range - akan selalu mengejar musuh
             for (const enemy of enemies) {
                 if (enemy.isDead || !enemy.isActive) continue;
                 const dist = this.distanceTo(enemy);
-                if (dist <= GameConfig.GAMEPLAY.AGGRO_RANGE && dist < bestDistance) {
+                
+                if (dist < bestDistance) {
                     bestDistance = dist;
                     bestTarget = enemy;
                 }
             }
             
-            // Jika tidak ada troop musuh dalam range, cari tower
+            // Jika tidak ada troop musuh, cari tower
             if (!bestTarget) {
                 for (const tower of enemyTowers) {
                     if (tower.isDead || !tower.isActive) continue;

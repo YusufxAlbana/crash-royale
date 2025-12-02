@@ -213,30 +213,53 @@ class Arena {
     }
 
     /**
-     * Draw spawn indicator
+     * Draw spawn indicator with zone highlight
      */
     drawSpawnIndicator(x, y, isValid, notEnoughElixir = false) {
         const ctx = this.ctx;
         const colors = GameConfig.COLORS;
+        const arena = GameConfig.ARENA;
         
+        // Draw spawn zone highlight (valid area in green, invalid in red)
+        // Valid spawn area for player
+        ctx.fillStyle = 'rgba(76, 175, 80, 0.15)';
+        ctx.fillRect(20, arena.PLAYER_SPAWN_MIN_Y, this.width - 40, arena.PLAYER_SPAWN_MAX_Y - arena.PLAYER_SPAWN_MIN_Y);
+        ctx.strokeStyle = 'rgba(76, 175, 80, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(20, arena.PLAYER_SPAWN_MIN_Y, this.width - 40, arena.PLAYER_SPAWN_MAX_Y - arena.PLAYER_SPAWN_MIN_Y);
+        
+        // Invalid area (enemy side) - show in red
+        ctx.fillStyle = 'rgba(244, 67, 54, 0.1)';
+        ctx.fillRect(0, 0, this.width, arena.PLAYER_SPAWN_MIN_Y);
+        
+        // Draw cursor indicator
         ctx.beginPath();
         ctx.arc(x, y, 30, 0, Math.PI * 2);
         
         if (notEnoughElixir) {
             // Orange/yellow for not enough elixir
-            ctx.fillStyle = 'rgba(255, 152, 0, 0.3)';
+            ctx.fillStyle = 'rgba(255, 152, 0, 0.4)';
             ctx.strokeStyle = '#FF9800';
         } else if (isValid) {
-            ctx.fillStyle = colors.SPAWN_VALID;
+            ctx.fillStyle = 'rgba(76, 175, 80, 0.4)';
             ctx.strokeStyle = '#4CAF50';
         } else {
-            ctx.fillStyle = colors.SPAWN_INVALID;
+            ctx.fillStyle = 'rgba(244, 67, 54, 0.4)';
             ctx.strokeStyle = '#F44336';
         }
         
         ctx.fill();
         ctx.lineWidth = 3;
         ctx.stroke();
+        
+        // Draw pulsing ring for valid position
+        if (isValid && !notEnoughElixir) {
+            ctx.beginPath();
+            ctx.arc(x, y, 35, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(76, 175, 80, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
     }
 
     /**
