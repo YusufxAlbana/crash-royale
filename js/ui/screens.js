@@ -19,7 +19,8 @@ const ScreenManager = {
             deck: document.getElementById('deck-screen'),
             history: document.getElementById('history-screen'),
             matchmaking: document.getElementById('matchmaking-screen'),
-            game: document.getElementById('game-screen')
+            game: document.getElementById('game-screen'),
+            profile: document.getElementById('profile-screen')
         };
 
         // Setup auth tabs
@@ -77,6 +78,23 @@ const ScreenManager = {
         document.getElementById('deck-back')?.addEventListener('click', () => {
             this.showScreen('menu');
         });
+        
+        document.getElementById('profile-back')?.addEventListener('click', () => {
+            this.showScreen('menu');
+        });
+        
+        // Profile button (click on player info)
+        document.getElementById('profile-btn')?.addEventListener('click', () => {
+            this.showScreen('profile');
+            this.loadProfile();
+        });
+        
+        // Profile save button
+        document.getElementById('profile-save')?.addEventListener('click', () => {
+            this.saveProfile();
+        });
+        
+
 
         document.getElementById('history-back')?.addEventListener('click', () => {
             this.showScreen('menu');
@@ -328,6 +346,145 @@ const ScreenManager = {
         document.getElementById('player-level').textContent = `Level ${user.level || 1}`;
         document.getElementById('player-trophies').textContent = user.trophies || 0;
         document.getElementById('player-gold').textContent = user.gold || 0;
+    },
+    
+    /**
+     * Load profile data
+     */
+    loadProfile() {
+        const user = window.currentUser;
+        if (!user) return;
+        
+        // Header info
+        document.getElementById('profile-username').textContent = user.username || 'Player';
+        document.getElementById('profile-id').textContent = `ID: ${user.odataId || '---'}`;
+        
+        // Editable fields - clear password fields
+        document.getElementById('edit-username').value = user.username || '';
+        document.getElementById('edit-password').value = '';
+        document.getElementById('edit-password-confirm').value = '';
+        
+        // Display stats (read-only)
+        document.getElementById('display-trophies').textContent = user.trophies || 0;
+        document.getElementById('display-gold').textContent = user.gold || 0;
+        document.getElementById('display-gems').textContent = user.gems || 0;
+        document.getElementById('display-level').textContent = user.level || 1;
+        
+        // Battle stats (read-only)
+        const stats = user.stats || {};
+        document.getElementById('display-wins').textContent = stats.wins || 0;
+        document.getElementById('display-losses').textContent = stats.losses || 0;
+        document.getElementById('display-draws').textContent = stats.draws || 0;
+        document.getElementById('display-threecrowns').textContent = stats.threeCrowns || 0;
+        
+        // Account info
+        if (user.createdAt) {
+            document.getElementById('display-created').textContent = new Date(user.createdAt).toLocaleDateString();
+        }
+        if (user.lastLogin) {
+            document.getElementById('display-lastlogin').textContent = new Date(user.lastLogin).toLocaleString();
+        }
+        
+        // Calculate performance
+        this.updatePerformanceDisplay(stats);
+    },
+    
+    /**
+     * Update performance display
+     */
+    updatePerformanceDisplay(stats) {
+        if (!stats) {
+            const user = window.currentUser;
+            stats = user?.stats || {};
+        }
+        
+        const wins = stats.wins || 0;
+        const losses = stats.losses || 0;
+        const draws = stats.draws || 0;
+        
+        const total = wins + losses + draws;
+        const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+        
+        document.getElementById('profile-winrate').textContent = `${winRate}%`;
+        document.getElementById('profile-total-matches').textContent = total;
+    },
+    
+    /**
+     * Save profile data (only username and password)
+     */
+    async saveProfile() {
+        if (!window.currentUser) return;
+        
+        const newUsername = document.getElementById('edit-username').value.trim();
+        const newPassword = document.getElementById('edit-password').value;
+        const confirmPassword = document.getElementById('edit-password-confirm').value;
+        
+        // Validate username
+        if (newUsername && newUsername.length < 3) {
+            alert('Username must be at least 3 characters');
+            return;
+        }
+        
+        // Validate password if provided
+        if (newPassword) {
+            if (newPassword.length < 4) {
+                alert('Password must be at least 4 characters');
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                alert('Passwords do not match');
+                return;
+            }
+        }
+        
+        const updates = {};
+        
+        // Only update if changed
+        if (newUsername && newUsername !== window.currentUser.username) {
+            updates.username = newUsername;
+        }
+        
+        if (newPassword) {
+            // Hash password (same method as auth-service)
+            updates.password = this.hashPassword(newPassword);
+        }
+        
+        if (Object.keys(updates).length === 0) {
+            alert('No changes to save');
+            return;
+        }
+        
+        // Save to Firebase via AuthService
+        if (window.AuthService) {
+            try {
+                await AuthService.updateProfile(updates);
+                
+                // Update local user
+                if (updates.username) {
+                    window.currentUser.username = updates.username;
+                }
+                
+                alert('Profile saved successfully!');
+                this.loadProfile();
+                this.updatePlayerInfo(window.currentUser);
+            } catch (error) {
+                console.error('Error saving profile:', error);
+                alert('Failed to save profile');
+            }
+        }
+    },
+    
+    /**
+     * Simple hash function for password (same as auth-service)
+     */
+    hashPassword(password) {
+        let hash = 0;
+        for (let i = 0; i < password.length; i++) {
+            const char = password.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return 'hash_' + Math.abs(hash).toString(16);
     }
 };
 

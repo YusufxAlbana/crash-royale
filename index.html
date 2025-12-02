@@ -53,7 +53,7 @@
     <!-- Main Menu Screen -->
     <div id="menu-screen" class="screen">
         <div class="menu-header">
-            <div class="player-info">
+            <div class="player-info" id="profile-btn" style="cursor: pointer;">
                 <div class="player-avatar">👤</div>
                 <div class="player-details">
                     <span id="player-name">Player</span>
@@ -74,16 +74,220 @@
         </div>
         
         <div class="menu-content">
-            <div class="arena-display">
-                <h2 id="current-arena">Arena 1</h2>
-                <div class="arena-preview">🏟️</div>
+            <!-- Quick Stats Bar -->
+            <div class="quick-stats-bar">
+                <div class="quick-stat">
+                    <span class="qs-icon">✅</span>
+                    <span class="qs-value" id="qs-wins">0</span>
+                    <span class="qs-label">Wins</span>
+                </div>
+                <div class="quick-stat">
+                    <span class="qs-icon">❌</span>
+                    <span class="qs-value" id="qs-losses">0</span>
+                    <span class="qs-label">Losses</span>
+                </div>
+                <div class="quick-stat">
+                    <span class="qs-icon">📊</span>
+                    <span class="qs-value" id="qs-winrate">0%</span>
+                    <span class="qs-label">Win Rate</span>
+                </div>
+                <div class="quick-stat">
+                    <span class="qs-icon">👑</span>
+                    <span class="qs-value" id="qs-crowns">0</span>
+                    <span class="qs-label">3-Crowns</span>
+                </div>
             </div>
             
-            <div class="menu-buttons">
-                <button id="battle-btn" class="btn-battle">⚔️ BATTLE</button>
-                <button id="deck-btn" class="btn-menu">📋 Deck</button>
-                <button id="cards-btn" class="btn-menu">🃏 Cards</button>
-                <button id="history-btn" class="btn-menu">📜 History</button>
+            <!-- Main Battle Section -->
+            <div class="battle-section">
+                <div class="arena-display">
+                    <div class="arena-badge">🏟️</div>
+                    <h2 id="current-arena">Arena 1</h2>
+                    <p class="arena-subtitle">Training Camp</p>
+                </div>
+                <button id="battle-btn" class="btn-battle">
+                    <span class="battle-icon">⚔️</span>
+                    <span class="battle-text">BATTLE</span>
+                    <span class="battle-sub">Find Opponent</span>
+                </button>
+            </div>
+            
+            <!-- Menu Grid -->
+            <div class="menu-grid">
+                <button id="deck-btn" class="menu-card">
+                    <span class="mc-icon">🎴</span>
+                    <span class="mc-title">Deck</span>
+                    <span class="mc-desc">Build your deck</span>
+                </button>
+                <button id="cards-btn" class="menu-card">
+                    <span class="mc-icon">🃏</span>
+                    <span class="mc-title">Cards</span>
+                    <span class="mc-desc">View all cards</span>
+                </button>
+                <button id="history-btn" class="menu-card">
+                    <span class="mc-icon">📜</span>
+                    <span class="mc-title">History</span>
+                    <span class="mc-desc">Match replays</span>
+                </button>
+                <button id="leaderboard-btn" class="menu-card">
+                    <span class="mc-icon">🏅</span>
+                    <span class="mc-title">Ranks</span>
+                    <span class="mc-desc">Leaderboard</span>
+                </button>
+            </div>
+            
+            <!-- Featured Section -->
+            <div class="featured-section">
+                <h3>🌟 Featured Cards</h3>
+                <div class="featured-cards" id="featured-cards">
+                    <!-- Will be populated by JS -->
+                </div>
+            </div>
+            
+            <!-- Tips Section -->
+            <div class="tips-section">
+                <div class="tip-card">
+                    <span class="tip-icon">💡</span>
+                    <div class="tip-content">
+                        <span class="tip-title">Tip of the Day</span>
+                        <span class="tip-text" id="daily-tip">Place troops behind your King Tower for a stronger push!</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Current Deck Preview -->
+            <div class="deck-preview-section">
+                <div class="deck-preview-header">
+                    <h3>🎴 Your Deck</h3>
+                    <span class="deck-elixir">⚡ <span id="menu-avg-elixir">0.0</span></span>
+                </div>
+                <div class="deck-preview" id="menu-deck-preview">
+                    <!-- Will be populated by JS -->
+                </div>
+            </div>
+            
+            <!-- Recent Match -->
+            <div class="recent-match-section" id="recent-match-section" style="display: none;">
+                <h3>🕐 Last Match</h3>
+                <div class="recent-match" id="recent-match">
+                    <!-- Will be populated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Profile Screen -->
+    <div id="profile-screen" class="screen">
+        <div class="screen-header">
+            <button class="btn-back" id="profile-back">←</button>
+            <h2>Profile</h2>
+            <button class="btn-save" id="profile-save">💾 Save</button>
+        </div>
+        <div class="profile-content">
+            <!-- Profile Header -->
+            <div class="profile-header">
+                <div class="profile-avatar-large">👤</div>
+                <div class="profile-username" id="profile-username">Username</div>
+                <div class="profile-id" id="profile-id">ID: ---</div>
+            </div>
+            
+            <!-- Account Settings (Editable) -->
+            <div class="profile-section">
+                <h3>⚙️ Account Settings</h3>
+                <div class="profile-form">
+                    <div class="form-group">
+                        <label>👤 Display Name</label>
+                        <input type="text" id="edit-username" placeholder="Enter new username" minlength="3">
+                    </div>
+                    <div class="form-group">
+                        <label>🔒 New Password</label>
+                        <input type="password" id="edit-password" placeholder="Enter new password (min 4 chars)">
+                    </div>
+                    <div class="form-group">
+                        <label>🔒 Confirm Password</label>
+                        <input type="password" id="edit-password-confirm" placeholder="Confirm new password">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stats Section (Read-only) -->
+            <div class="profile-section">
+                <h3>📊 Statistics</h3>
+                <div class="profile-stats-display">
+                    <div class="stat-display-item">
+                        <span class="stat-icon">🏆</span>
+                        <span class="stat-value" id="display-trophies">0</span>
+                        <span class="stat-label">Trophies</span>
+                    </div>
+                    <div class="stat-display-item">
+                        <span class="stat-icon">💰</span>
+                        <span class="stat-value" id="display-gold">0</span>
+                        <span class="stat-label">Gold</span>
+                    </div>
+                    <div class="stat-display-item">
+                        <span class="stat-icon">💎</span>
+                        <span class="stat-value" id="display-gems">0</span>
+                        <span class="stat-label">Gems</span>
+                    </div>
+                    <div class="stat-display-item">
+                        <span class="stat-icon">⭐</span>
+                        <span class="stat-value" id="display-level">1</span>
+                        <span class="stat-label">Level</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Battle Stats Section (Read-only) -->
+            <div class="profile-section">
+                <h3>⚔️ Battle Stats</h3>
+                <div class="profile-stats-display">
+                    <div class="stat-display-item win">
+                        <span class="stat-value" id="display-wins">0</span>
+                        <span class="stat-label">Wins</span>
+                    </div>
+                    <div class="stat-display-item lose">
+                        <span class="stat-value" id="display-losses">0</span>
+                        <span class="stat-label">Losses</span>
+                    </div>
+                    <div class="stat-display-item">
+                        <span class="stat-value" id="display-draws">0</span>
+                        <span class="stat-label">Draws</span>
+                    </div>
+                    <div class="stat-display-item crown">
+                        <span class="stat-value" id="display-threecrowns">0</span>
+                        <span class="stat-label">3-Crowns</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Performance Display -->
+            <div class="profile-section">
+                <h3>📈 Performance</h3>
+                <div class="profile-performance">
+                    <div class="performance-item">
+                        <span class="perf-label">Win Rate</span>
+                        <span class="perf-value" id="profile-winrate">0%</span>
+                    </div>
+                    <div class="performance-item">
+                        <span class="perf-label">Total Matches</span>
+                        <span class="perf-value" id="profile-total-matches">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Account Info -->
+            <div class="profile-section">
+                <h3>📋 Account Info</h3>
+                <div class="account-info">
+                    <div class="info-row">
+                        <span class="info-label">Created</span>
+                        <span class="info-value" id="display-created">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Last Login</span>
+                        <span class="info-value" id="display-lastlogin">-</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
