@@ -342,15 +342,40 @@ const ScreenManager = {
      * Update player info in menu
      */
     updatePlayerInfo(user) {
-        document.getElementById('player-name').textContent = user.username || 'Player';
-        document.getElementById('player-level').textContent = `Level ${user.level || 1}`;
-        document.getElementById('player-trophies').textContent = user.trophies || 0;
-        document.getElementById('player-gold').textContent = user.gold || 0;
+        // Profile info
+        const nameEl = document.getElementById('player-name');
+        const levelEl = document.getElementById('player-level');
+        const levelBadgeEl = document.getElementById('player-level-badge');
+        
+        if (nameEl) nameEl.textContent = user.username || 'Player';
+        if (levelEl) levelEl.textContent = this.getRankName(user.trophies || 0);
+        if (levelBadgeEl) levelBadgeEl.textContent = user.level || 1;
+        
+        // Currency
+        const trophiesEl = document.getElementById('player-trophies');
+        const goldEl = document.getElementById('player-gold');
+        const gemsEl = document.getElementById('player-gems');
+        
+        if (trophiesEl) trophiesEl.textContent = (user.trophies || 0).toLocaleString();
+        if (goldEl) goldEl.textContent = (user.gold || 0).toLocaleString();
+        if (gemsEl) gemsEl.textContent = (user.gems || 0).toLocaleString();
         
         // Update home screen content if functions exist
         if (typeof updateQuickStats === 'function') updateQuickStats();
         if (typeof updateArenaInfo === 'function') updateArenaInfo();
         if (typeof updateDeckPreview === 'function') updateDeckPreview();
+    },
+    
+    /**
+     * Get rank name based on trophies
+     */
+    getRankName(trophies) {
+        if (trophies >= 3000) return 'Legend';
+        if (trophies >= 2000) return 'Master';
+        if (trophies >= 1400) return 'Champion';
+        if (trophies >= 800) return 'Warrior';
+        if (trophies >= 400) return 'Fighter';
+        return 'Rookie';
     },
     
     /**
