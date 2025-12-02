@@ -172,24 +172,33 @@ class Troop extends Entity {
      */
     moveTowards(target, deltaTime) {
         const speed = this.isCharging ? this.chargeSpeed : this.moveSpeed;
+        
+        // Cek apakah perlu menyeberang sungai
+        if (this.needsToCrossRiver(target.y)) {
+            // Harus lewat jembatan dulu
+            this.navigateToBridge(target, deltaTime);
+            return;
+        }
+        
         const dx = target.x - this.x;
         const dy = target.y - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         
         if (dist > 0) {
-            // Check river crossing
-            const nextY = this.y + (dy / dist) * speed * (deltaTime / 1000);
-            if (!this.canCrossAtPosition(this.x, nextY)) {
-                // Navigate to bridge
-                this.navigateToBridge(deltaTime);
-                return;
-            }
-            
             this.vx = (dx / dist) * speed;
             this.vy = (dy / dist) * speed;
             
-            this.x += this.vx * (deltaTime / 1000);
-            this.y += this.vy * (deltaTime / 1000);
+            const newX = this.x + this.vx * (deltaTime / 1000);
+            const newY = this.y + this.vy * (deltaTime / 1000);
+            
+            // Cek apakah posisi baru valid (tidak di sungai)
+            if (this.isValidPosition(newX, newY)) {
+                this.x = newX;
+                this.y = newY;
+            } else {
+                // Tidak bisa bergerak langsung, cari jalan lewat jembatan
+                this.navigateToBridge(target, deltaTime);
+            }
         }
     }
 
@@ -206,52 +215,108 @@ class Troop extends Entity {
         }
         
         const targetY = this.team === 'player' ? 60 : GameConfig.ARENA.HEIGHT - 60;
+        
+        // Cek apakah perlu menyeberang sungai
+        if (this.needsToCrossRiver(targetY)) {
+            this.navigateToBridge({ x: this.x, y: targetY }, deltaTime);
+            return;
+        }
+        
         const dy = targetY - this.y;
         const dist = Math.abs(dy);
         
         if (dist > 5) {
-            // Check river crossing
-            const nextY = this.y + Math.sign(dy) * this.moveSpeed * (deltaTime / 1000);
-            if (!this.canCrossAtPosition(this.x, nextY)) {
-                this.navigateToBridge(deltaTime);
-                return;
-            }
+            const newY = this.y + Math.sign(dy) * this.moveSpeed * (deltaTime / 1000);
             
-            this.vy = Math.sign(dy) * this.moveSpeed;
-            this.y += this.vy * (deltaTime / 1000);
+            if (this.isValidPosition(this.x, newY)) {
+                this.y = newY;
+            }
         }
     }
-
+    
     /**
-     * Check if can cross river at position
+     * Check if troop needs to cross river to reach target
      */
-    canCrossAtPosition(x, y) {
+    needsToCrossRiver(targetY) {
         const arena = GameConfig.ARENA;
         const bridgeY = arena.BRIDGE_Y;
         const riverHalf = arena.RIVER_HEIGHT / 2;
         
-        // Not in river area
-        if (y < bridgeY - riverHalf || y > bridgeY + riverHalf) {
-            return true;
-        }
-        
-        // Can jump river
+        // Jika bisa lompat sungai, tidak perlu jembatan
         if (this.canJumpRiver) {
-            return true;
+            return false;
         }
         
-        // Check if on bridge
-        return GameUtils.isOnBridge(x, y);
+        const riverTop = bridgeY - riverHalf;
+        const riverBottom = bridgeY + riverHalf;
+        
+        // Cek apakah troop dan target berada di sisi berbeda dari sungai
+        const troopAboveRiver = this.y < riverTop;
+        const troopBelowRiver = this.y > riverBottom;
+        const targetAboveRiver = targetY < riverTop;
+        const targetBelowRiver = targetY > riverBottom;
+        
+        // Perlu menyeberang jika di sisi berbeda
+        if (troopAboveRiver && targetBelowRiver) return true;
+        if (troopBelowRiver && targetAboveRiver) return true;
+        
+        return false;
+    }
+    
+    /**
+     * Check if position is valid (not in river unless on bridge)
+     */
+    isValidPosition(x, y) {
+        const arena = GameConfig.ARENA;
+        const bridgeY = arena.BRIDGE_Y;
+        const riverHalf = arena.RIVER_HEIGHT / 2;
+        
+        // Cek apakah di area sungai
+        if (y >= bridgeY - riverHalf && y <= bridgeY + riverHalf) {
+            // Di area sungai - hanya valid jika di jembatan atau bisa lompat
+            if (this.canJumpRiver) return true;
+            return GameUtils.isOnBridge(x, y);
+        }
+        
+        return true;
     }
 
     /**
-     * Navigate to nearest bridge
+     * Navigate to nearest bridge then to target
      */
-    navigateToBridge(deltaTime) {
-        const bridge = GameUtils.getNearestBridge(this.x, this.y, this.team === 'player' ? 0 : 640);
+    navigateToBridge(target, deltaTime) {
+        const arena = GameConfig.ARENA;
+        const bridgeY = arena.BRIDGE_Y;
         
-        const dx = bridge.x - this.x;
-        const dy = bridge.y - this.y;
+        // Pilih jembatan terdekat
+        const leftBridgeX = arena.WIDTH * 0.25;
+        const rightBridgeX = arena.WIDTH * 0.75;
+        
+        // Pilih jembatan yang lebih dekat ke posisi troop atau target
+        const distToLeft = Math.abs(this.x - leftBridgeX);
+        const distToRight = Math.abs(this.x - rightBridgeX);
+        const bridgeX = distToLeft < distToRight ? leftBridgeX : rightBridgeX;
+        
+        // Tentukan waypoint
+        let waypointX, waypointY;
+        
+        // Cek apakah sudah di jembatan
+        if (GameUtils.isOnBridge(this.x, this.y)) {
+            // Sudah di jembatan, lanjut ke sisi lain
+            if (this.team === 'player') {
+                waypointY = bridgeY - arena.RIVER_HEIGHT / 2 - 10; // Ke atas
+            } else {
+                waypointY = bridgeY + arena.RIVER_HEIGHT / 2 + 10; // Ke bawah
+            }
+            waypointX = this.x;
+        } else {
+            // Belum di jembatan, pergi ke jembatan dulu
+            waypointX = bridgeX;
+            waypointY = bridgeY;
+        }
+        
+        const dx = waypointX - this.x;
+        const dy = waypointY - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         
         if (dist > 5) {
@@ -341,14 +406,52 @@ class Troop extends Entity {
                 const dy = (other.y - this.y) / dist;
                 
                 const pushForce = GameConfig.GAMEPLAY.COLLISION_PUSH_FORCE;
-                this.x -= dx * overlap * pushForce;
-                this.y -= dy * overlap * pushForce;
+                const newX = this.x - dx * overlap * pushForce;
+                const newY = this.y - dy * overlap * pushForce;
+                
+                // Hanya push jika posisi baru valid (tidak di sungai)
+                if (this.isValidPosition(newX, this.y)) {
+                    this.x = newX;
+                }
+                if (this.isValidPosition(this.x, newY)) {
+                    this.y = newY;
+                }
             }
         }
         
         // Keep in bounds
         this.x = GameUtils.clamp(this.x, this.size, GameConfig.ARENA.WIDTH - this.size);
         this.y = GameUtils.clamp(this.y, this.size, GameConfig.ARENA.HEIGHT - this.size);
+        
+        // Pastikan tidak di sungai (kecuali di jembatan)
+        this.preventRiverPosition();
+    }
+    
+    /**
+     * Prevent troop from being in river
+     */
+    preventRiverPosition() {
+        const arena = GameConfig.ARENA;
+        const bridgeY = arena.BRIDGE_Y;
+        const riverHalf = arena.RIVER_HEIGHT / 2;
+        
+        // Jika bisa lompat, tidak perlu cek
+        if (this.canJumpRiver) return;
+        
+        // Cek apakah di sungai tapi tidak di jembatan
+        if (this.y >= bridgeY - riverHalf && this.y <= bridgeY + riverHalf) {
+            if (!GameUtils.isOnBridge(this.x, this.y)) {
+                // Dorong keluar dari sungai ke sisi terdekat
+                const distToTop = Math.abs(this.y - (bridgeY - riverHalf));
+                const distToBottom = Math.abs(this.y - (bridgeY + riverHalf));
+                
+                if (distToTop < distToBottom) {
+                    this.y = bridgeY - riverHalf - 5;
+                } else {
+                    this.y = bridgeY + riverHalf + 5;
+                }
+            }
+        }
     }
 
     /**

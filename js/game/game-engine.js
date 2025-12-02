@@ -505,9 +505,54 @@ class GameEngine {
             elixirCount.textContent = currentElixir;
         }
         
+        // Update side panels
+        this.updateSidePanels();
+        
         // Update card affordability
         if (window.GameUI && this.playerState.hand) {
             window.GameUI.updateCardHand(this.playerState.hand, this.playerState.nextCard);
+        }
+    }
+    
+    /**
+     * Update side panel info
+     */
+    updateSidePanels() {
+        // Player crowns
+        const yourCrownCount = document.getElementById('your-crown-count');
+        if (yourCrownCount) {
+            yourCrownCount.textContent = this.gameState.playerCrowns;
+        }
+        
+        // Enemy crowns
+        const enemyCrownCount = document.getElementById('enemy-crown-count');
+        if (enemyCrownCount) {
+            enemyCrownCount.textContent = this.gameState.enemyCrowns;
+        }
+        
+        // Player towers
+        const yourTowers = document.getElementById('your-towers');
+        if (yourTowers) {
+            const alive = this.gameState.playerTowers.filter(t => !t.isDead).length;
+            yourTowers.textContent = '🏰'.repeat(alive) + '💥'.repeat(3 - alive);
+        }
+        
+        // Enemy towers
+        const enemyTowers = document.getElementById('enemy-towers');
+        if (enemyTowers) {
+            const alive = this.gameState.enemyTowers.filter(t => !t.isDead).length;
+            enemyTowers.textContent = '🏰'.repeat(alive) + '💥'.repeat(3 - alive);
+        }
+        
+        // Troop counts
+        const yourTroopCount = document.getElementById('your-troop-count');
+        if (yourTroopCount) {
+            yourTroopCount.textContent = this.gameState.playerTroops.length;
+        }
+        
+        const enemyTroopCount = document.getElementById('enemy-troop-count');
+        if (enemyTroopCount) {
+            enemyTroopCount.textContent = this.gameState.enemyTroops.length;
         }
     }
 
@@ -860,21 +905,10 @@ class GameEngine {
     }
 
     /**
-     * Update tower display
+     * Update tower display (now handled by updateSidePanels)
      */
     updateTowerDisplay() {
-        const yourTowers = document.getElementById('your-towers');
-        const enemyTowers = document.getElementById('enemy-towers');
-        
-        if (yourTowers) {
-            const alive = this.gameState.playerTowers.filter(t => !t.isDead).length;
-            yourTowers.textContent = '🏰'.repeat(alive) + '💥'.repeat(3 - alive);
-        }
-        
-        if (enemyTowers) {
-            const alive = this.gameState.enemyTowers.filter(t => !t.isDead).length;
-            enemyTowers.textContent = '🏰'.repeat(alive) + '💥'.repeat(3 - alive);
-        }
+        // Handled by updateSidePanels()
     }
 
     /**

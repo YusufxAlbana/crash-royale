@@ -4,13 +4,132 @@
 
 /* Game Screen */
 #game-screen {
-    background: #1a1a1a;
+    background: #0a0a0a;
 }
 
-#game-container {
-    position: relative;
+/* Game Layout - 3 columns */
+#game-layout {
+    display: flex;
     width: 100%;
     height: 100%;
+    justify-content: center;
+    align-items: stretch;
+}
+
+/* Side Panels */
+.side-panel {
+    width: 180px;
+    min-width: 150px;
+    background: linear-gradient(180deg, #1a2a3a, #0d1520);
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    border: 1px solid #2a3a4a;
+}
+
+#left-panel {
+    border-right: 2px solid #3a6ea5;
+}
+
+#right-panel {
+    border-left: 2px solid #d94a4a;
+}
+
+#right-panel.enemy {
+    background: linear-gradient(180deg, #2a1a1a, #150d0d);
+}
+
+.panel-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem 0;
+}
+
+.panel-avatar {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.panel-name {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 0.5rem;
+}
+
+#left-panel .panel-name {
+    color: #4a90d9;
+}
+
+#right-panel .panel-name {
+    color: #d94a4a;
+}
+
+.panel-towers {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.panel-crowns {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(0,0,0,0.3);
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    margin-top: 0.5rem;
+}
+
+.crown-label {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+}
+
+.crown-count {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #ffd700;
+}
+
+.panel-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #444, transparent);
+    margin: 0.5rem 0;
+}
+
+.stats-section {
+    flex: 1;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(0,0,0,0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: #888;
+    text-transform: uppercase;
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #fff;
+}
+
+/* Game Container */
+#game-container {
+    position: relative;
+    flex: 1;
+    max-width: 500px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -45,17 +164,19 @@
     top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.8);
     padding: 0.5rem 1.5rem;
     border-radius: 20px;
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     font-weight: bold;
     color: #fff;
     z-index: 10;
+    border: 2px solid #444;
 }
 
 #game-timer.overtime {
-    background: rgba(208, 2, 27, 0.8);
+    background: rgba(208, 2, 27, 0.9);
+    border-color: #ff4444;
     animation: timerPulse 0.5s ease-in-out infinite;
 }
 
@@ -64,33 +185,20 @@
     50% { transform: translateX(-50%) scale(1.05); }
 }
 
-/* Player Info Bars */
+/* Hide old player info bars - now using side panels */
 .game-player-info {
-    position: absolute;
-    left: 10px;
-    right: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
+    display: none;
 }
 
-.game-player-info.top {
-    top: 50px;
-}
-
-.game-player-info.bottom {
-    bottom: 160px;
-}
-
-.game-player-info .player-name {
-    font-weight: bold;
-}
-
-.tower-count {
-    font-size: 1.25rem;
+/* Responsive - hide panels on small screens */
+@media (max-width: 800px) {
+    .side-panel {
+        display: none;
+    }
+    
+    #game-container {
+        max-width: 100%;
+    }
 }
 
 /* Elixir Bar */

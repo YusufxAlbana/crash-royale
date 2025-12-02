@@ -140,55 +140,81 @@
 
     <!-- Game Screen -->
     <div id="game-screen" class="screen">
-        <!-- Game Canvas Container -->
-        <div id="game-container">
-            <canvas id="game-canvas"></canvas>
+        <div id="game-layout">
+            <!-- Left Side Panel - Player Info -->
+            <div id="left-panel" class="side-panel">
+                <div class="panel-section player-section">
+                    <div class="panel-avatar">👤</div>
+                    <div class="panel-name" id="your-name">You</div>
+                    <div class="panel-towers" id="your-towers">🏰🏰🏰</div>
+                    <div class="panel-crowns">
+                        <span class="crown-label">Crowns</span>
+                        <span class="crown-count" id="your-crown-count">0</span>
+                    </div>
+                </div>
+                <div class="panel-divider"></div>
+                <div class="panel-section stats-section">
+                    <div class="stat-item">
+                        <span class="stat-label">Troops</span>
+                        <span class="stat-value" id="your-troop-count">0</span>
+                    </div>
+                </div>
+            </div>
             
-            <!-- Game UI Overlay -->
-            <div id="game-ui">
-                <!-- Timer -->
-                <div id="game-timer">3:00</div>
+            <!-- Game Canvas Container -->
+            <div id="game-container">
+                <canvas id="game-canvas"></canvas>
                 
-                <!-- Player Info (Top - Enemy) -->
-                <div id="enemy-info" class="game-player-info top">
-                    <span class="player-name" id="enemy-name">Enemy</span>
-                    <div class="tower-count">
-                        <span id="enemy-towers">🏰🏰🏰</span>
+                <!-- Game UI Overlay -->
+                <div id="game-ui">
+                    <!-- Timer -->
+                    <div id="game-timer">3:00</div>
+                    
+                    <!-- Elixir Bar -->
+                    <div id="elixir-container">
+                        <div id="elixir-bar">
+                            <div class="elixir-slot"></div>
+                            <div class="elixir-slot"></div>
+                            <div class="elixir-slot"></div>
+                            <div class="elixir-slot"></div>
+                            <div class="elixir-slot"></div>
+                            <div class="elixir-slot"></div>
+                            <div class="elixir-slot"></div>
+                            <div class="elixir-slot"></div>
+                            <div class="elixir-slot"></div>
+                            <div class="elixir-slot"></div>
+                        </div>
+                        <span id="elixir-count">0</span>
+                        <span class="elixir-icon">💧</span>
+                    </div>
+                    
+                    <!-- Card Hand -->
+                    <div id="card-hand">
+                        <div id="next-card" class="card-slot next">
+                            <span class="card-label">Next</span>
+                        </div>
+                        <div id="active-cards" class="active-cards"></div>
                     </div>
                 </div>
-                
-                <!-- Player Info (Bottom - You) -->
-                <div id="player-info-game" class="game-player-info bottom">
-                    <span class="player-name" id="your-name">You</span>
-                    <div class="tower-count">
-                        <span id="your-towers">🏰🏰🏰</span>
+            </div>
+            
+            <!-- Right Side Panel - Enemy Info -->
+            <div id="right-panel" class="side-panel enemy">
+                <div class="panel-section enemy-section">
+                    <div class="panel-avatar">🤖</div>
+                    <div class="panel-name" id="enemy-name">Enemy</div>
+                    <div class="panel-towers" id="enemy-towers">🏰🏰🏰</div>
+                    <div class="panel-crowns">
+                        <span class="crown-label">Crowns</span>
+                        <span class="crown-count" id="enemy-crown-count">0</span>
                     </div>
                 </div>
-                
-                <!-- Elixir Bar -->
-                <div id="elixir-container">
-                    <div id="elixir-bar">
-                        <div class="elixir-slot"></div>
-                        <div class="elixir-slot"></div>
-                        <div class="elixir-slot"></div>
-                        <div class="elixir-slot"></div>
-                        <div class="elixir-slot"></div>
-                        <div class="elixir-slot"></div>
-                        <div class="elixir-slot"></div>
-                        <div class="elixir-slot"></div>
-                        <div class="elixir-slot"></div>
-                        <div class="elixir-slot"></div>
+                <div class="panel-divider"></div>
+                <div class="panel-section stats-section">
+                    <div class="stat-item">
+                        <span class="stat-label">Troops</span>
+                        <span class="stat-value" id="enemy-troop-count">0</span>
                     </div>
-                    <span id="elixir-count">0</span>
-                    <span class="elixir-icon">💧</span>
-                </div>
-                
-                <!-- Card Hand -->
-                <div id="card-hand">
-                    <div id="next-card" class="card-slot next">
-                        <span class="card-label">Next</span>
-                    </div>
-                    <div id="active-cards" class="active-cards"></div>
                 </div>
             </div>
         </div>
