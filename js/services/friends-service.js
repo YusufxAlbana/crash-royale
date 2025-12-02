@@ -1,6 +1,7 @@
 /* ============================================
    FRIENDS SERVICE
    Handles friend list, requests, and chat
+   Data stored in Firebase
    ============================================ */
 
 const FriendsService = {
@@ -8,40 +9,123 @@ const FriendsService = {
     friendRequests: [],
     chats: {},
     currentChatFriend: null,
+    isOnline: false,
+    friendCode: null,
+    unsubscribers: [],
 
     /**
      * Initialize friends service
      */
-    init() {
-        this.loadFriends();
+    async init() {
+        this.isOnline = window.FirebaseConfig && !FirebaseConfig.isOffline();
+        
+        await this.loadFriends();
         this.setupEventListeners();
-        this.generateFriendCode();
+        await this.generateFriendCode();
         this.renderFriendsList();
         this.renderChatList();
+        
+        // Listen for real-time updates if online
+        if (this.isOnline) {
+            this.setupRealtimeListeners();
+        }
     },
 
     /**
-     * Generate unique friend code
+     * Generate unique friend code and save to Firebase
      */
-    generateFriendCode() {
+    async generateFriendCode() {
         const user = window.currentUser;
         if (!user) return;
         
-        // Generate code from username
-        const code = '#' + user.username.substring(0, 3).toUpperCase() + 
-                     Math.random().toString(36).substring(2, 5).toUpperCase();
+        // Check if user already has a friend code
+        if (this.isOnline) {
+            try {
+                const db = FirebaseConfig.getDb();
+                const userDoc = await db.collection('users').doc(user.username.toLowerCase()).get();
+                
+                if (userDoc.exists && userDoc.data().friendCode) {
+                    this.friendCode = userDoc.data().friendCode;
+                } else {
+                    // Generate new code
+                    this.friendCode = '#' + user.username.substring(0, 3).toUpperCase() + 
+                                     Math.random().toString(36).substring(2, 5).toUpperCase();
+                    
+                    // Save to Firebase
+                    await db.collection('users').doc(user.username.toLowerCase()).update({
+                        friendCode: this.friendCode
+                    });
+                }
+            } catch (e) {
+                console.error('Error with friend code:', e);
+                this.friendCode = '#' + user.username.substring(0, 3).toUpperCase() + 
+                                 Math.random().toString(36).substring(2, 5).toUpperCase();
+            }
+        } else {
+            this.friendCode = '#' + user.username.substring(0, 3).toUpperCase() + 
+                             Math.random().toString(36).substring(2, 5).toUpperCase();
+        }
         
         const codeEl = document.getElementById('my-friend-code');
-        if (codeEl) codeEl.textContent = code;
+        if (codeEl) codeEl.textContent = this.friendCode;
         
-        return code;
+        return this.friendCode;
     },
 
     /**
-     * Load friends from storage
+     * Load friends from Firebase or localStorage
      */
-    loadFriends() {
-        const saved = localStorage.getItem('battle_arena_friends');
+    async loadFriends() {
+        const user = window.currentUser;
+        if (!user) return;
+        
+        if (this.isOnline) {
+            try {
+                const db = FirebaseConfig.getDb();
+                const userKey = user.username.toLowerCase();
+                
+                // Load friends list
+                const friendsDoc = await db.collection('friends').doc(userKey).get();
+                if (friendsDoc.exists) {
+                    const data = friendsDoc.data();
+                    this.friends = data.friends || [];
+                    this.friendRequests = data.requests || [];
+                }
+                
+                // Load chats
+                const chatsSnapshot = await db.collection('chats')
+                    .where('participants', 'array-contains', userKey)
+                    .get();
+                
+                chatsSnapshot.forEach(doc => {
+                    const chatData = doc.data();
+                    const friendId = chatData.participants.find(p => p !== userKey);
+                    this.chats[friendId] = {
+                        messages: chatData.messages || [],
+                        unread: chatData.unread?.[userKey] || 0
+                    };
+                });
+                
+                // Update online status
+                await this.updateOnlineStatus(true);
+                
+                console.log('Friends loaded from Firebase');
+            } catch (e) {
+                console.error('Error loading friends from Firebase:', e);
+                this.loadFromLocalStorage();
+            }
+        } else {
+            this.loadFromLocalStorage();
+        }
+        
+        // No demo friends - only real players from Firebase
+    },
+
+    /**
+     * Load from localStorage (offline fallback)
+     */
+    loadFromLocalStorage() {
+        const saved = localStorage.getItem('battle_arena_friends_' + window.currentUser?.username);
         if (saved) {
             try {
                 const data = JSON.parse(saved);
@@ -49,30 +133,136 @@ const FriendsService = {
                 this.friendRequests = data.requests || [];
                 this.chats = data.chats || {};
             } catch (e) {
-                console.error('Error loading friends:', e);
+                console.error('Error loading friends from localStorage:', e);
             }
-        }
-        
-        // Add some demo friends if empty
-        if (this.friends.length === 0) {
-            this.friends = [
-                { id: 'demo1', username: 'ProGamer', trophies: 2500, online: true, lastSeen: Date.now() },
-                { id: 'demo2', username: 'BattleKing', trophies: 1800, online: false, lastSeen: Date.now() - 3600000 },
-                { id: 'demo3', username: 'ArenaChamp', trophies: 3200, online: true, lastSeen: Date.now() }
-            ];
-            this.saveFriends();
         }
     },
 
     /**
-     * Save friends to storage
+     * Save friends to Firebase and localStorage
      */
-    saveFriends() {
-        localStorage.setItem('battle_arena_friends', JSON.stringify({
+    async saveFriends() {
+        const user = window.currentUser;
+        if (!user) return;
+        
+        const data = {
             friends: this.friends,
-            requests: this.friendRequests,
+            requests: this.friendRequests
+        };
+        
+        // Always save to localStorage as backup
+        localStorage.setItem('battle_arena_friends_' + user.username, JSON.stringify({
+            ...data,
             chats: this.chats
         }));
+        
+        // Save to Firebase if online
+        if (this.isOnline) {
+            try {
+                const db = FirebaseConfig.getDb();
+                const userKey = user.username.toLowerCase();
+                
+                await db.collection('friends').doc(userKey).set(data, { merge: true });
+                console.log('Friends saved to Firebase');
+            } catch (e) {
+                console.error('Error saving friends to Firebase:', e);
+            }
+        }
+    },
+
+    /**
+     * Update user's online status
+     */
+    async updateOnlineStatus(isOnline) {
+        if (!this.isOnline || !window.currentUser) return;
+        
+        try {
+            const db = FirebaseConfig.getDb();
+            const userKey = window.currentUser.username.toLowerCase();
+            
+            await db.collection('users').doc(userKey).update({
+                online: isOnline,
+                lastSeen: Date.now()
+            });
+        } catch (e) {
+            console.error('Error updating online status:', e);
+        }
+    },
+
+    /**
+     * Setup real-time listeners for Firebase
+     */
+    setupRealtimeListeners() {
+        if (!this.isOnline || !window.currentUser) return;
+        
+        const db = FirebaseConfig.getDb();
+        const userKey = window.currentUser.username.toLowerCase();
+        
+        // Listen for friend requests
+        const unsubRequests = db.collection('friends').doc(userKey)
+            .onSnapshot(doc => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    this.friendRequests = data.requests || [];
+                    this.friends = data.friends || [];
+                    this.renderFriendsList();
+                    this.updateRequestBadge();
+                }
+            });
+        
+        this.unsubscribers.push(unsubRequests);
+        
+        // Listen for new messages
+        const unsubChats = db.collection('chats')
+            .where('participants', 'array-contains', userKey)
+            .onSnapshot(snapshot => {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === 'modified' || change.type === 'added') {
+                        const chatData = change.doc.data();
+                        const friendId = chatData.participants.find(p => p !== userKey);
+                        
+                        this.chats[friendId] = {
+                            messages: chatData.messages || [],
+                            unread: chatData.unread?.[userKey] || 0
+                        };
+                        
+                        // Update UI if in chat
+                        if (this.currentChatFriend?.id === friendId || 
+                            this.currentChatFriend?.username?.toLowerCase() === friendId) {
+                            this.renderMessages(friendId);
+                        }
+                        
+                        this.renderChatList();
+                    }
+                });
+            });
+        
+        this.unsubscribers.push(unsubChats);
+        
+        // Update offline status when leaving
+        window.addEventListener('beforeunload', () => {
+            this.updateOnlineStatus(false);
+        });
+    },
+
+    /**
+     * Update request badge count
+     */
+    updateRequestBadge() {
+        const badge = document.getElementById('request-count');
+        const tabBadge = document.getElementById('tab-request-count');
+        
+        if (badge) badge.textContent = this.friendRequests.length;
+        if (tabBadge) tabBadge.textContent = this.friendRequests.length;
+    },
+
+    /**
+     * Cleanup listeners
+     */
+    cleanup() {
+        this.unsubscribers.forEach(unsub => unsub());
+        this.unsubscribers = [];
+        this.updateOnlineStatus(false);
     },
 
     /**
@@ -108,8 +298,14 @@ const FriendsService = {
             this.hideAddFriendModal();
         });
         
-        document.getElementById('confirm-add-friend')?.addEventListener('click', () => {
-            this.sendFriendRequest();
+        // Search player button
+        document.getElementById('search-player-btn')?.addEventListener('click', () => {
+            this.searchPlayers();
+        });
+        
+        // Search on Enter key
+        document.getElementById('add-friend-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.searchPlayers();
         });
         
         // Copy friend code
@@ -172,6 +368,12 @@ const FriendsService = {
             modal.classList.add('active');
             document.getElementById('add-friend-input').value = '';
             document.getElementById('add-friend-error').textContent = '';
+            document.getElementById('search-results').innerHTML = `
+                <div class="search-placeholder">
+                    <span>🔍</span>
+                    <p>Search for players to add as friends</p>
+                </div>
+            `;
         }
     },
 
@@ -184,40 +386,245 @@ const FriendsService = {
     },
 
     /**
-     * Send friend request
+     * Search players from Firebase
      */
-    sendFriendRequest() {
+    async searchPlayers() {
         const input = document.getElementById('add-friend-input');
+        const resultsContainer = document.getElementById('search-results');
         const errorEl = document.getElementById('add-friend-error');
-        const value = input?.value.trim();
+        const searchBtn = document.getElementById('search-player-btn');
         
-        if (!value) {
+        const query = input?.value.trim();
+        
+        if (!query) {
             errorEl.textContent = 'Please enter a username or friend code';
             return;
         }
         
-        // Check if already friends
-        if (this.friends.some(f => f.username.toLowerCase() === value.toLowerCase())) {
-            errorEl.textContent = 'Already friends with this player';
+        if (query.length < 2) {
+            errorEl.textContent = 'Enter at least 2 characters';
             return;
         }
         
-        // Simulate sending request
+        errorEl.textContent = '';
+        
+        // Show loading
+        resultsContainer.innerHTML = `
+            <div class="search-loading">
+                <div class="loading-spinner"></div>
+                <p>Searching...</p>
+            </div>
+        `;
+        searchBtn.disabled = true;
+        
+        try {
+            const results = await this.searchPlayersInFirebase(query);
+            this.renderSearchResults(results);
+        } catch (e) {
+            console.error('Search error:', e);
+            resultsContainer.innerHTML = `
+                <div class="no-results">
+                    <span>❌</span>
+                    <p>Error searching. Please try again.</p>
+                </div>
+            `;
+        }
+        
+        searchBtn.disabled = false;
+    },
+
+    /**
+     * Search players in Firebase by username or friend code
+     */
+    async searchPlayersInFirebase(query) {
+        if (!this.isOnline) {
+            return [];
+        }
+        
+        const db = FirebaseConfig.getDb();
+        const results = [];
+        const currentUsername = window.currentUser?.username.toLowerCase();
+        const searchLower = query.toLowerCase().replace('#', '');
+        
+        try {
+            // Search by exact username match
+            const exactMatch = await db.collection('users').doc(searchLower).get();
+            if (exactMatch.exists && exactMatch.id !== currentUsername) {
+                results.push({ id: exactMatch.id, ...exactMatch.data() });
+            }
+            
+            // Search by friend code (exact match)
+            const friendCodeUpper = '#' + query.replace('#', '').toUpperCase();
+            const codeQuery = await db.collection('users')
+                .where('friendCode', '==', friendCodeUpper)
+                .limit(10)
+                .get();
+            
+            codeQuery.forEach(doc => {
+                if (doc.id !== currentUsername && !results.some(r => r.id === doc.id)) {
+                    results.push({ id: doc.id, ...doc.data() });
+                }
+            });
+            
+            // Search by username prefix (for partial matches)
+            // Note: Firestore doesn't support LIKE queries, so we use range query
+            const prefixQuery = await db.collection('users')
+                .orderBy('username')
+                .startAt(query)
+                .endAt(query + '\uf8ff')
+                .limit(10)
+                .get();
+            
+            prefixQuery.forEach(doc => {
+                if (doc.id !== currentUsername && !results.some(r => r.id === doc.id)) {
+                    results.push({ id: doc.id, ...doc.data() });
+                }
+            });
+            
+        } catch (e) {
+            console.error('Firebase search error:', e);
+        }
+        
+        return results;
+    },
+
+    /**
+     * Render search results
+     */
+    renderSearchResults(results) {
+        const container = document.getElementById('search-results');
+        if (!container) return;
+        
+        if (results.length === 0) {
+            container.innerHTML = `
+                <div class="no-results">
+                    <span>😕</span>
+                    <p>No players found</p>
+                    <p style="font-size: 0.75rem; opacity: 0.7;">Try a different username or friend code</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = results.map(player => {
+            const isFriend = this.friends.some(f => f.id === player.id || f.username?.toLowerCase() === player.id);
+            const isPending = this.friends.some(f => (f.id === player.id || f.username?.toLowerCase() === player.id) && f.pending);
+            
+            let btnText = '➕ Add';
+            let btnClass = '';
+            
+            if (isFriend && !isPending) {
+                btnText = '✓ Friends';
+                btnClass = 'added';
+            } else if (isPending) {
+                btnText = '⏳ Pending';
+                btnClass = 'pending';
+            }
+            
+            return `
+                <div class="search-result-item" data-player-id="${player.id}">
+                    <div class="search-result-avatar">👤</div>
+                    <div class="search-result-info">
+                        <span class="search-result-name">${player.username || player.id}</span>
+                        <div class="search-result-details">
+                            <span>🏆 ${player.trophies || 0}</span>
+                            <span>Lv.${player.level || 1}</span>
+                            ${player.friendCode ? `<span class="search-result-code">${player.friendCode}</span>` : ''}
+                        </div>
+                    </div>
+                    <button class="search-result-btn ${btnClass}" 
+                            data-player-id="${player.id}"
+                            data-player-name="${player.username || player.id}"
+                            data-player-trophies="${player.trophies || 0}"
+                            ${isFriend ? 'disabled' : ''}>
+                        ${btnText}
+                    </button>
+                </div>
+            `;
+        }).join('');
+        
+        // Add click handlers
+        container.querySelectorAll('.search-result-btn:not([disabled])').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.addFriendFromSearch(btn);
+            });
+        });
+    },
+
+    /**
+     * Add friend from search results
+     */
+    async addFriendFromSearch(btn) {
+        const playerId = btn.dataset.playerId;
+        const playerName = btn.dataset.playerName;
+        const playerTrophies = parseInt(btn.dataset.playerTrophies) || 0;
+        
+        btn.disabled = true;
+        btn.textContent = '...';
+        
+        try {
+            await this.sendFriendRequestTo(playerId, playerName, playerTrophies);
+            
+            btn.textContent = '⏳ Pending';
+            btn.classList.add('pending');
+            
+        } catch (e) {
+            console.error('Error adding friend:', e);
+            btn.disabled = false;
+            btn.textContent = '➕ Add';
+            document.getElementById('add-friend-error').textContent = 'Error sending request';
+        }
+    },
+
+    /**
+     * Send friend request to specific player
+     */
+    async sendFriendRequestTo(playerId, playerName, playerTrophies) {
+        if (!this.isOnline) {
+            throw new Error('Offline mode');
+        }
+        
+        const db = FirebaseConfig.getDb();
+        const userKey = window.currentUser.username.toLowerCase();
+        
+        // Add friend request to target user's requests
+        const targetFriendsRef = db.collection('friends').doc(playerId);
+        const targetFriendsDoc = await targetFriendsRef.get();
+        
+        const currentRequests = targetFriendsDoc.exists ? 
+            (targetFriendsDoc.data().requests || []) : [];
+        
+        // Check if request already sent
+        if (currentRequests.some(r => r.id === userKey)) {
+            throw new Error('Request already sent');
+        }
+        
+        // Add request to target
+        currentRequests.push({
+            id: userKey,
+            username: window.currentUser.username,
+            trophies: window.currentUser.trophies || 0,
+            timestamp: Date.now()
+        });
+        
+        await targetFriendsRef.set({ requests: currentRequests }, { merge: true });
+        
+        // Add to local friends list as pending
         const newFriend = {
-            id: 'friend_' + Date.now(),
-            username: value.replace('#', ''),
-            trophies: Math.floor(Math.random() * 3000),
-            online: Math.random() > 0.5,
-            lastSeen: Date.now()
+            id: playerId,
+            username: playerName,
+            trophies: playerTrophies,
+            online: false,
+            lastSeen: Date.now(),
+            pending: true
         };
         
         this.friends.push(newFriend);
-        this.saveFriends();
+        await this.saveFriends();
         this.renderFriendsList();
-        this.hideAddFriendModal();
-        
-        alert(`Friend request sent to ${newFriend.username}!`);
     },
+
+
 
     /**
      * Render friends list (home panel)
@@ -372,6 +779,19 @@ const FriendsService = {
                 if (friend) this.battleFriend(friend);
             });
         });
+        
+        // Accept/Decline handlers for requests
+        container.querySelectorAll('.friend-btn-full.accept').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.acceptFriendRequest(btn.dataset.friendId);
+            });
+        });
+        
+        container.querySelectorAll('.friend-btn-full.decline').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.declineFriendRequest(btn.dataset.friendId);
+            });
+        });
     },
 
     /**
@@ -502,35 +922,73 @@ const FriendsService = {
     /**
      * Send message
      */
-    sendMessage() {
+    async sendMessage() {
         const input = document.getElementById('chat-input');
         const text = input?.value.trim();
         
         if (!text || !this.currentChatFriend) return;
         
-        const friendId = this.currentChatFriend.id;
+        const friendId = this.currentChatFriend.id || this.currentChatFriend.username?.toLowerCase();
+        const userKey = window.currentUser?.username.toLowerCase();
         
         if (!this.chats[friendId]) {
             this.chats[friendId] = { messages: [], unread: 0 };
         }
         
-        // Add message
-        this.chats[friendId].messages.push({
+        const newMessage = {
             text,
+            sender: userKey,
             sent: true,
             timestamp: Date.now()
-        });
+        };
+        
+        // Add message locally
+        this.chats[friendId].messages.push(newMessage);
         
         // Clear input
         input.value = '';
         
-        // Save and render
-        this.saveFriends();
+        // Render immediately
         this.renderMessages(friendId);
         this.renderChatList();
         
-        // Simulate reply after delay
-        if (this.currentChatFriend.online) {
+        // Save to Firebase
+        if (this.isOnline) {
+            try {
+                const db = FirebaseConfig.getDb();
+                const chatId = [userKey, friendId].sort().join('_');
+                
+                const chatRef = db.collection('chats').doc(chatId);
+                const chatDoc = await chatRef.get();
+                
+                const messages = chatDoc.exists ? (chatDoc.data().messages || []) : [];
+                messages.push({
+                    text,
+                    sender: userKey,
+                    timestamp: Date.now()
+                });
+                
+                await chatRef.set({
+                    participants: [userKey, friendId],
+                    messages: messages,
+                    lastMessage: text,
+                    lastMessageTime: Date.now(),
+                    unread: {
+                        [friendId]: (chatDoc.data()?.unread?.[friendId] || 0) + 1,
+                        [userKey]: 0
+                    }
+                }, { merge: true });
+                
+            } catch (e) {
+                console.error('Error sending message to Firebase:', e);
+            }
+        }
+        
+        // Save locally
+        await this.saveFriends();
+        
+        // Simulate reply for demo friends (offline mode)
+        if (!this.isOnline && this.currentChatFriend.online) {
             setTimeout(() => {
                 this.receiveMessage(friendId);
             }, 1000 + Math.random() * 2000);
@@ -538,9 +996,9 @@ const FriendsService = {
     },
 
     /**
-     * Simulate receiving message
+     * Simulate receiving message (for demo/offline)
      */
-    receiveMessage(friendId) {
+    async receiveMessage(friendId) {
         const replies = [
             'Hey! 👋',
             'Want to battle? ⚔️',
@@ -554,13 +1012,17 @@ const FriendsService = {
         
         const reply = replies[Math.floor(Math.random() * replies.length)];
         
+        if (!this.chats[friendId]) {
+            this.chats[friendId] = { messages: [], unread: 0 };
+        }
+        
         this.chats[friendId].messages.push({
             text: reply,
             sent: false,
             timestamp: Date.now()
         });
         
-        this.saveFriends();
+        await this.saveFriends();
         
         // Only render if still in chat
         if (this.currentChatFriend?.id === friendId) {
@@ -594,6 +1056,104 @@ const FriendsService = {
         }
         
         alert(`Battle invite sent to ${friend.username}!\n\n(Friend battles coming soon)`);
+    },
+
+    /**
+     * Accept friend request
+     */
+    async acceptFriendRequest(requesterId) {
+        const request = this.friendRequests.find(r => r.id === requesterId);
+        if (!request) return;
+        
+        // Remove from requests
+        this.friendRequests = this.friendRequests.filter(r => r.id !== requesterId);
+        
+        // Add to friends
+        const newFriend = {
+            id: request.id,
+            username: request.username,
+            trophies: request.trophies || 0,
+            online: false,
+            lastSeen: Date.now()
+        };
+        this.friends.push(newFriend);
+        
+        if (this.isOnline) {
+            try {
+                const db = FirebaseConfig.getDb();
+                const userKey = window.currentUser.username.toLowerCase();
+                
+                // Update own friends list
+                await db.collection('friends').doc(userKey).set({
+                    friends: this.friends,
+                    requests: this.friendRequests
+                }, { merge: true });
+                
+                // Add self to requester's friends list
+                const requesterFriendsRef = db.collection('friends').doc(requesterId);
+                const requesterDoc = await requesterFriendsRef.get();
+                const requesterFriends = requesterDoc.exists ? (requesterDoc.data().friends || []) : [];
+                
+                requesterFriends.push({
+                    id: userKey,
+                    username: window.currentUser.username,
+                    trophies: window.currentUser.trophies || 0,
+                    online: true,
+                    lastSeen: Date.now()
+                });
+                
+                await requesterFriendsRef.set({ friends: requesterFriends }, { merge: true });
+                
+            } catch (e) {
+                console.error('Error accepting friend request:', e);
+            }
+        }
+        
+        await this.saveFriends();
+        this.renderFriendsList();
+        this.renderFullFriendsList('requests');
+        this.updateRequestBadge();
+        
+        alert(`You are now friends with ${request.username}!`);
+    },
+
+    /**
+     * Decline friend request
+     */
+    async declineFriendRequest(requesterId) {
+        this.friendRequests = this.friendRequests.filter(r => r.id !== requesterId);
+        
+        await this.saveFriends();
+        this.renderFullFriendsList('requests');
+        this.updateRequestBadge();
+    },
+
+    /**
+     * Remove friend
+     */
+    async removeFriend(friendId) {
+        if (!confirm('Remove this friend?')) return;
+        
+        this.friends = this.friends.filter(f => f.id !== friendId);
+        delete this.chats[friendId];
+        
+        if (this.isOnline) {
+            try {
+                const db = FirebaseConfig.getDb();
+                const userKey = window.currentUser.username.toLowerCase();
+                
+                await db.collection('friends').doc(userKey).set({
+                    friends: this.friends
+                }, { merge: true });
+                
+            } catch (e) {
+                console.error('Error removing friend:', e);
+            }
+        }
+        
+        await this.saveFriends();
+        this.renderFriendsList();
+        this.renderFullFriendsList('all');
     },
 
     /**

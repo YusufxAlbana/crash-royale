@@ -371,14 +371,22 @@
 
     <!-- Add Friend Modal -->
     <div id="add-friend-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content add-friend-content">
             <h2>➕ Add Friend</h2>
-            <p class="modal-hint">Enter username or friend code</p>
-            <input type="text" id="add-friend-input" placeholder="Username or #CODE">
-            <div class="modal-buttons">
-                <button class="btn-secondary" id="cancel-add-friend">Cancel</button>
-                <button class="btn-primary" id="confirm-add-friend">Send Request</button>
+            <p class="modal-hint">Search by username or friend code</p>
+            
+            <div class="search-input-wrapper">
+                <input type="text" id="add-friend-input" placeholder="Enter username or #CODE...">
+                <button class="search-btn" id="search-player-btn">🔍</button>
             </div>
+            
+            <div class="search-results" id="search-results">
+                <div class="search-placeholder">
+                    <span>🔍</span>
+                    <p>Search for players to add as friends</p>
+                </div>
+            </div>
+            
             <p class="modal-error" id="add-friend-error"></p>
             
             <div class="your-friend-code">
@@ -388,6 +396,8 @@
                     <button class="copy-btn" id="copy-friend-code">📋</button>
                 </div>
             </div>
+            
+            <button class="btn-secondary close-modal-btn" id="cancel-add-friend">Close</button>
         </div>
     </div>
 
