@@ -20,9 +20,9 @@ const CardsData = {
         description: 'A tough melee fighter with good HP and damage.',
         stats: {
             hp: 660,
-            damage: 75,
-            attackSpeed: 1.2,
-            moveSpeed: 35,         // Diperlambat dari 60
+            damage: 50,            // Dikurangi dari 75
+            attackSpeed: 1.5,      // Diperlambat dari 1.2
+            moveSpeed: 35,
             range: 25,
             size: 18,
             attackType: 'melee',
@@ -43,9 +43,9 @@ const CardsData = {
         description: 'Ranged attacker that deals consistent damage from distance.',
         stats: {
             hp: 125,
-            damage: 42,
-            attackSpeed: 1.2,
-            moveSpeed: 35,         // Diperlambat dari 60
+            damage: 28,            // Dikurangi dari 42
+            attackSpeed: 1.5,      // Diperlambat dari 1.2
+            moveSpeed: 35,
             range: 120,
             size: 14,
             attackType: 'ranged',
@@ -67,9 +67,9 @@ const CardsData = {
         description: 'Slow but powerful tank that only targets buildings.',
         stats: {
             hp: 2000,
-            damage: 126,
-            attackSpeed: 1.5,
-            moveSpeed: 22,         // Diperlambat dari 40
+            damage: 80,            // Dikurangi dari 126
+            attackSpeed: 1.8,      // Diperlambat dari 1.5
+            moveSpeed: 22,
             range: 25,
             size: 26,
             attackType: 'melee',
@@ -90,9 +90,9 @@ const CardsData = {
         description: 'Long range shooter with high damage per shot.',
         stats: {
             hp: 340,
-            damage: 100,
-            attackSpeed: 1.1,
-            moveSpeed: 32,         // Diperlambat dari 55
+            damage: 65,            // Dikurangi dari 100
+            attackSpeed: 1.4,      // Diperlambat dari 1.1
+            moveSpeed: 32,
             range: 140,
             size: 15,
             attackType: 'ranged',
@@ -113,9 +113,9 @@ const CardsData = {
         description: 'Fast and deadly robot that deals massive damage.',
         stats: {
             hp: 600,
-            damage: 325,
-            attackSpeed: 1.8,
-            moveSpeed: 45,         // Diperlambat dari 75
+            damage: 200,           // Dikurangi dari 325
+            attackSpeed: 2.0,      // Diperlambat dari 1.8
+            moveSpeed: 45,
             range: 25,
             size: 17,
             attackType: 'melee',
@@ -136,9 +136,9 @@ const CardsData = {
         description: 'Spins and deals area damage to all nearby enemies.',
         stats: {
             hp: 880,
-            damage: 120,
-            attackSpeed: 1.5,
-            moveSpeed: 32,         // Diperlambat dari 55
+            damage: 75,            // Dikurangi dari 120
+            attackSpeed: 1.8,      // Diperlambat dari 1.5
+            moveSpeed: 32,
             range: 30,
             size: 18,
             attackType: 'melee',
@@ -160,9 +160,9 @@ const CardsData = {
         description: 'Throws bombs that deal area damage.',
         stats: {
             hp: 150,
-            damage: 128,
-            attackSpeed: 1.9,
-            moveSpeed: 32,         // Diperlambat dari 55
+            damage: 80,            // Dikurangi dari 128
+            attackSpeed: 2.2,      // Diperlambat dari 1.9
+            moveSpeed: 32,
             range: 100,
             size: 14,
             attackType: 'ranged',
@@ -184,9 +184,9 @@ const CardsData = {
         description: 'Summons a horde of skeletons to overwhelm enemies.',
         stats: {
             hp: 32,
-            damage: 32,
-            attackSpeed: 1.0,
-            moveSpeed: 42,         // Diperlambat dari 70
+            damage: 20,            // Dikurangi dari 32
+            attackSpeed: 1.2,      // Diperlambat dari 1.0
+            moveSpeed: 42,
             range: 20,
             size: 10,
             attackType: 'melee',
@@ -208,9 +208,9 @@ const CardsData = {
         description: 'Powerful mage that shoots fireballs dealing splash damage.',
         stats: {
             hp: 340,
-            damage: 130,
-            attackSpeed: 1.4,
-            moveSpeed: 32,         // Diperlambat dari 55
+            damage: 85,            // Dikurangi dari 130
+            attackSpeed: 1.7,      // Diperlambat dari 1.4
+            moveSpeed: 32,
             range: 120,
             size: 15,
             attackType: 'ranged',
@@ -232,9 +232,9 @@ const CardsData = {
         description: 'Fast and cheap melee attackers.',
         stats: {
             hp: 80,
-            damage: 50,
-            attackSpeed: 1.1,
-            moveSpeed: 52,         // Diperlambat dari 85
+            damage: 32,            // Dikurangi dari 50
+            attackSpeed: 1.3,      // Diperlambat dari 1.1
+            moveSpeed: 52,
             range: 20,
             size: 12,
             attackType: 'melee',
@@ -256,10 +256,10 @@ const CardsData = {
         description: 'Charges at enemies dealing double damage on impact.',
         stats: {
             hp: 1000,
-            damage: 245,
-            attackSpeed: 1.5,
-            moveSpeed: 32,         // Diperlambat dari 55
-            chargeSpeed: 65,       // Diperlambat dari 110
+            damage: 160,           // Dikurangi dari 245
+            attackSpeed: 1.8,      // Diperlambat dari 1.5
+            moveSpeed: 32,
+            chargeSpeed: 65,
             range: 25,
             size: 22,
             attackType: 'melee',
@@ -282,9 +282,9 @@ const CardsData = {
         description: 'Fast troop that jumps the river and targets buildings.',
         stats: {
             hp: 800,
-            damage: 150,
-            attackSpeed: 1.6,
-            moveSpeed: 58,         // Diperlambat dari 95
+            damage: 100,           // Dikurangi dari 150
+            attackSpeed: 1.8,      // Diperlambat dari 1.6
+            moveSpeed: 58,
             range: 25,
             size: 20,
             attackType: 'melee',

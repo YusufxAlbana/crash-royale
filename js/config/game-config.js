@@ -42,23 +42,23 @@ const GameConfig = {
     },
 
     // ========================================
-    // TOWER STATS (Disesuaikan dengan arena lebih besar)
+    // TOWER STATS (HP ditambah untuk game lebih lama)
     // ========================================
     TOWER_STATS: {
         PRINCESS: {
-            hp: 1400,
-            damage: 90,
-            attackSpeed: 0.8,
-            range: 150,          // Diperbesar dari 120
-            size: 40             // Diperbesar dari 35
+            hp: 2800,            // Ditambah dari 1400
+            damage: 70,          // Dikurangi dari 90
+            attackSpeed: 1.0,    // Diperlambat dari 0.8
+            range: 150,
+            size: 40
         },
         KING: {
-            hp: 2400,
-            damage: 110,
-            attackSpeed: 1.0,
-            range: 160,          // Diperbesar dari 130
-            size: 50,            // Diperbesar dari 45
-            activationRange: 180 // Diperbesar dari 150
+            hp: 4800,            // Ditambah dari 2400
+            damage: 85,          // Dikurangi dari 110
+            attackSpeed: 1.2,    // Diperlambat dari 1.0
+            range: 160,
+            size: 50,
+            activationRange: 180
         }
     },
 
