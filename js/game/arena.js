@@ -101,8 +101,8 @@ class Arena {
     drawBridges(ctx) {
         const bridgeY = GameConfig.ARENA.BRIDGE_Y;
         const riverHeight = GameConfig.ARENA.RIVER_HEIGHT;
-        const bridgeWidth = 50;
-        const bridgeLength = riverHeight + 20;
+        const bridgeWidth = 65;  // Diperbesar dari 50
+        const bridgeLength = riverHeight + 25;
         
         // Left bridge
         this.drawBridge(ctx, this.width * 0.25, bridgeY, bridgeWidth, bridgeLength);
@@ -189,7 +189,7 @@ class Arena {
      * Draw tower base platform
      */
     drawTowerBase(ctx, x, y, team, isKing = false) {
-        const size = isKing ? 50 : 40;
+        const size = isKing ? 55 : 45;  // Diperbesar
         
         // Platform
         ctx.beginPath();

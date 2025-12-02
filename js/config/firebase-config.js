@@ -47,9 +47,16 @@ let isOfflineMode = false;
 function initializeFirebase() {
     try {
         // Check if config is still placeholder
-        if (firebaseConfig.apiKey === "AIzaSyAxmBkKyK_rUJ0vsBnP834eCu1qybtGDDY") {
+        if (firebaseConfig.apiKey === "YOUR_API_KEY_HERE" || !firebaseConfig.apiKey) {
             console.warn("⚠️ Firebase config belum diisi! Game berjalan dalam mode OFFLINE.");
             console.warn("📝 Buka js/config/firebase-config.js dan isi dengan config Firebase Anda.");
+            isOfflineMode = true;
+            return false;
+        }
+
+        // Check if firebase SDK is loaded
+        if (typeof firebase === 'undefined') {
+            console.warn("⚠️ Firebase SDK tidak tersedia. Game berjalan dalam mode OFFLINE.");
             isOfflineMode = true;
             return false;
         }
@@ -70,6 +77,7 @@ function initializeFirebase() {
             });
 
         console.log("✅ Firebase initialized successfully!");
+        isOfflineMode = false;
         return true;
     } catch (error) {
         console.error("❌ Firebase initialization error:", error);

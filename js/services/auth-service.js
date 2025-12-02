@@ -1,13 +1,14 @@
 /* ============================================
    AUTH SERVICE
    Handles authentication with username/password
-   Uses localStorage for simple auth
+   Data disimpan ke Firebase jika online, localStorage jika offline
    ============================================ */
 
 const AuthService = {
     currentUser: null,
     userProfile: null,
     authStateListeners: [],
+    isOnline: false,
     USERS_KEY: 'battle_arena_users',
     CURRENT_USER_KEY: 'battle_arena_current_user',
 
@@ -15,15 +16,45 @@ const AuthService = {
      * Initialize auth service
      */
     init() {
+        // Check if Firebase is available
+        this.isOnline = !FirebaseConfig.isOffline();
+        console.log('Auth mode:', this.isOnline ? 'ONLINE (Firebase)' : 'OFFLINE (localStorage)');
+        
         // Check for existing session
         const savedUser = localStorage.getItem(this.CURRENT_USER_KEY);
         if (savedUser) {
             try {
                 this.userProfile = JSON.parse(savedUser);
                 this.currentUser = { username: this.userProfile.username };
+                
+                // Sync with Firebase if online
+                if (this.isOnline) {
+                    this.syncFromFirebase(this.userProfile.username);
+                }
             } catch (e) {
                 localStorage.removeItem(this.CURRENT_USER_KEY);
             }
+        }
+    },
+
+    /**
+     * Sync user data from Firebase
+     */
+    async syncFromFirebase(username) {
+        if (!this.isOnline) return;
+        
+        try {
+            const db = FirebaseConfig.getDb();
+            const userDoc = await db.collection('users').doc(username.toLowerCase()).get();
+            
+            if (userDoc.exists) {
+                const firebaseData = userDoc.data();
+                this.userProfile = { ...this.userProfile, ...firebaseData };
+                localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(this.userProfile));
+                console.log('Synced from Firebase');
+            }
+        } catch (error) {
+            console.error('Error syncing from Firebase:', error);
         }
     },
 
@@ -33,7 +64,6 @@ const AuthService = {
     onAuthStateChanged(callback) {
         this.authStateListeners.push(callback);
         
-        // Immediately call with current state
         if (this.userProfile) {
             callback(this.currentUser, this.userProfile);
         } else {
@@ -42,9 +72,9 @@ const AuthService = {
     },
 
     /**
-     * Get all registered users
+     * Get all registered users (localStorage fallback)
      */
-    getUsers() {
+    getLocalUsers() {
         const users = localStorage.getItem(this.USERS_KEY);
         return users ? JSON.parse(users) : {};
     },
@@ -52,7 +82,7 @@ const AuthService = {
     /**
      * Save users to localStorage
      */
-    saveUsers(users) {
+    saveLocalUsers(users) {
         localStorage.setItem(this.USERS_KEY, JSON.stringify(users));
     },
 
@@ -71,19 +101,30 @@ const AuthService = {
             throw new Error('Password tidak cocok');
         }
 
-        const users = this.getUsers();
         const userKey = username.toLowerCase();
+        const hashedPassword = this.hashPassword(password);
 
         // Check if username exists
-        if (users[userKey]) {
-            throw new Error('Username sudah digunakan');
+        if (this.isOnline) {
+            // Check in Firebase
+            const db = FirebaseConfig.getDb();
+            const userDoc = await db.collection('users').doc(userKey).get();
+            if (userDoc.exists) {
+                throw new Error('Username sudah digunakan');
+            }
+        } else {
+            // Check in localStorage
+            const users = this.getLocalUsers();
+            if (users[userKey]) {
+                throw new Error('Username sudah digunakan');
+            }
         }
 
         // Create user profile
         const profile = {
             odataId: 'user_' + Date.now(),
             username: username,
-            password: this.hashPassword(password),
+            password: hashedPassword,
             level: 1,
             exp: 0,
             trophies: 0,
@@ -97,13 +138,23 @@ const AuthService = {
                 draws: 0,
                 threeCrowns: 0
             },
+            matchHistory: [],
             createdAt: Date.now(),
             lastLogin: Date.now()
         };
 
         // Save user
-        users[userKey] = profile;
-        this.saveUsers(users);
+        if (this.isOnline) {
+            // Save to Firebase
+            const db = FirebaseConfig.getDb();
+            await db.collection('users').doc(userKey).set(profile);
+            console.log('User saved to Firebase');
+        } else {
+            // Save to localStorage
+            const users = this.getLocalUsers();
+            users[userKey] = profile;
+            this.saveLocalUsers(users);
+        }
 
         // Set current user
         this.currentUser = { username: username };
@@ -124,22 +175,45 @@ const AuthService = {
             throw new Error('Username dan password harus diisi');
         }
 
-        const users = this.getUsers();
         const userKey = username.toLowerCase();
-        const user = users[userKey];
+        const hashedPassword = this.hashPassword(password);
+        let user = null;
 
-        if (!user) {
-            throw new Error('Username tidak ditemukan');
+        if (this.isOnline) {
+            // Check in Firebase
+            const db = FirebaseConfig.getDb();
+            const userDoc = await db.collection('users').doc(userKey).get();
+            
+            if (!userDoc.exists) {
+                throw new Error('Username tidak ditemukan');
+            }
+            
+            user = userDoc.data();
+        } else {
+            // Check in localStorage
+            const users = this.getLocalUsers();
+            user = users[userKey];
+            
+            if (!user) {
+                throw new Error('Username tidak ditemukan');
+            }
         }
 
-        if (user.password !== this.hashPassword(password)) {
+        if (user.password !== hashedPassword) {
             throw new Error('Password salah');
         }
 
         // Update last login
         user.lastLogin = Date.now();
-        users[userKey] = user;
-        this.saveUsers(users);
+        
+        if (this.isOnline) {
+            const db = FirebaseConfig.getDb();
+            await db.collection('users').doc(userKey).update({ lastLogin: Date.now() });
+        } else {
+            const users = this.getLocalUsers();
+            users[userKey] = user;
+            this.saveLocalUsers(users);
+        }
 
         // Set current user
         this.currentUser = { username: user.username };
@@ -201,48 +275,62 @@ const AuthService = {
     /**
      * Update user profile
      */
-    updateProfile(updates) {
+    async updateProfile(updates) {
         if (!this.userProfile) return;
 
-        const users = this.getUsers();
         const userKey = this.userProfile.username.toLowerCase();
 
-        if (users[userKey]) {
-            Object.assign(users[userKey], updates);
-            this.saveUsers(users);
-            
-            Object.assign(this.userProfile, updates);
-            localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(this.userProfile));
+        // Update local
+        Object.assign(this.userProfile, updates);
+        localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(this.userProfile));
+
+        // Update Firebase if online
+        if (this.isOnline) {
+            try {
+                const db = FirebaseConfig.getDb();
+                await db.collection('users').doc(userKey).update(updates);
+                console.log('Profile updated in Firebase');
+            } catch (error) {
+                console.error('Error updating Firebase:', error);
+            }
+        } else {
+            // Update localStorage
+            const users = this.getLocalUsers();
+            if (users[userKey]) {
+                Object.assign(users[userKey], updates);
+                this.saveLocalUsers(users);
+            }
         }
     },
 
     /**
      * Save deck
      */
-    saveDeck(deck) {
-        this.updateProfile({ deck: deck });
+    async saveDeck(deck) {
+        await this.updateProfile({ deck: deck });
     },
 
     /**
      * Update trophies
      */
-    updateTrophies(change) {
-        if (!this.userProfile) return;
+    async updateTrophies(change) {
+        if (!this.userProfile) return 0;
         
         const newTrophies = Math.max(0, (this.userProfile.trophies || 0) + change);
-        this.updateProfile({ trophies: newTrophies });
+        await this.updateProfile({ trophies: newTrophies });
         return newTrophies;
     },
 
     /**
      * Save match result
      */
-    saveMatchResult(result) {
+    async saveMatchResult(result) {
         if (!this.userProfile) return;
 
-        // Get match history
-        const historyKey = 'match_history_' + this.userProfile.odataId;
-        const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+        const userKey = this.userProfile.username.toLowerCase();
+        
+        // Get current match history
+        let history = this.userProfile.matchHistory || [];
         
         // Add new match
         history.unshift({
@@ -251,7 +339,7 @@ const AuthService = {
         });
 
         // Keep only last 20
-        localStorage.setItem(historyKey, JSON.stringify(history.slice(0, 20)));
+        history = history.slice(0, 20);
 
         // Update stats
         const stats = this.userProfile.stats || { wins: 0, losses: 0, draws: 0, threeCrowns: 0 };
@@ -261,7 +349,11 @@ const AuthService = {
         
         if (result.playerCrowns === 3) stats.threeCrowns++;
 
-        this.updateProfile({ stats: stats });
+        // Save
+        await this.updateProfile({ 
+            matchHistory: history,
+            stats: stats 
+        });
     },
 
     /**
@@ -269,9 +361,7 @@ const AuthService = {
      */
     getMatchHistory() {
         if (!this.userProfile) return [];
-        
-        const historyKey = 'match_history_' + this.userProfile.odataId;
-        return JSON.parse(localStorage.getItem(historyKey) || '[]');
+        return this.userProfile.matchHistory || [];
     }
 };
 

@@ -27,9 +27,15 @@ async function initApp() {
 }
 
 /**
- * Initialize Auth
+ * Initialize Firebase first, then Auth
  */
 function initAuth() {
+    // Initialize Firebase first
+    if (window.FirebaseConfig) {
+        FirebaseConfig.init();
+    }
+    
+    // Then initialize Auth
     if (window.AuthService) {
         AuthService.init();
         return true;

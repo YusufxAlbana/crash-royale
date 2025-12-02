@@ -128,10 +128,10 @@ const GameUtils = {
             return false;
         }
         
-        // Check if on left or right bridge
+        // Check if on left or right bridge (disesuaikan dengan arena lebih besar)
         const leftBridgeX = arena.WIDTH * 0.25;
         const rightBridgeX = arena.WIDTH * 0.75;
-        const bridgeWidth = 50;
+        const bridgeWidth = 65; // Diperbesar dari 50
         
         return (Math.abs(x - leftBridgeX) < bridgeWidth/2) || 
                (Math.abs(x - rightBridgeX) < bridgeWidth/2);

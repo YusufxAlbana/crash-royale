@@ -1,6 +1,7 @@
 /* ============================================
    CARDS DATA
    Definisi semua kartu dalam game
+   Kecepatan troop diperlambat untuk gameplay lebih strategis
    ============================================ */
 
 const CardsData = {
@@ -20,14 +21,14 @@ const CardsData = {
         stats: {
             hp: 660,
             damage: 75,
-            attackSpeed: 1.2,      // Hits per second
-            moveSpeed: 60,         // Pixels per second
-            range: 25,             // Melee range
-            size: 18,              // Collision radius
+            attackSpeed: 1.2,
+            moveSpeed: 35,         // Diperlambat dari 60
+            range: 25,
+            size: 18,
             attackType: 'melee',
-            targetType: 'ground',  // Can only target ground
-            targets: 'all',        // Targets troops and buildings
-            count: 1               // Spawn count
+            targetType: 'ground',
+            targets: 'all',
+            count: 1
         }
     },
 
@@ -44,14 +45,14 @@ const CardsData = {
             hp: 125,
             damage: 42,
             attackSpeed: 1.2,
-            moveSpeed: 60,
-            range: 100,            // Ranged
+            moveSpeed: 35,         // Diperlambat dari 60
+            range: 120,
             size: 14,
             attackType: 'ranged',
             targetType: 'ground',
             targets: 'all',
-            count: 2,              // Spawns 2 archers
-            spawnSpread: 20        // Jarak antar spawn
+            count: 2,
+            spawnSpread: 25
         }
     },
 
@@ -68,12 +69,12 @@ const CardsData = {
             hp: 2000,
             damage: 126,
             attackSpeed: 1.5,
-            moveSpeed: 40,         // Slow
+            moveSpeed: 22,         // Diperlambat dari 40
             range: 25,
-            size: 24,
+            size: 26,
             attackType: 'melee',
             targetType: 'ground',
-            targets: 'buildings',  // Only targets buildings
+            targets: 'buildings',
             count: 1
         }
     },
@@ -91,8 +92,8 @@ const CardsData = {
             hp: 340,
             damage: 100,
             attackSpeed: 1.1,
-            moveSpeed: 55,
-            range: 120,
+            moveSpeed: 32,         // Diperlambat dari 55
+            range: 140,
             size: 15,
             attackType: 'ranged',
             targetType: 'ground',
@@ -113,10 +114,10 @@ const CardsData = {
         stats: {
             hp: 600,
             damage: 325,
-            attackSpeed: 1.8,      // Slow attack
-            moveSpeed: 75,         // Fast
+            attackSpeed: 1.8,
+            moveSpeed: 45,         // Diperlambat dari 75
             range: 25,
-            size: 16,
+            size: 17,
             attackType: 'melee',
             targetType: 'ground',
             targets: 'all',
@@ -137,14 +138,14 @@ const CardsData = {
             hp: 880,
             damage: 120,
             attackSpeed: 1.5,
-            moveSpeed: 55,
+            moveSpeed: 32,         // Diperlambat dari 55
             range: 30,
             size: 18,
             attackType: 'melee',
             targetType: 'ground',
             targets: 'all',
             count: 1,
-            splashRadius: 40       // Area damage
+            splashRadius: 45
         }
     },
 
@@ -161,14 +162,14 @@ const CardsData = {
             hp: 150,
             damage: 128,
             attackSpeed: 1.9,
-            moveSpeed: 55,
-            range: 80,
+            moveSpeed: 32,         // Diperlambat dari 55
+            range: 100,
             size: 14,
             attackType: 'ranged',
             targetType: 'ground',
             targets: 'all',
             count: 1,
-            splashRadius: 35
+            splashRadius: 40
         }
     },
 
@@ -185,14 +186,14 @@ const CardsData = {
             hp: 32,
             damage: 32,
             attackSpeed: 1.0,
-            moveSpeed: 70,
+            moveSpeed: 42,         // Diperlambat dari 70
             range: 20,
             size: 10,
             attackType: 'melee',
             targetType: 'ground',
             targets: 'all',
-            count: 12,             // Banyak skeleton
-            spawnSpread: 30
+            count: 12,
+            spawnSpread: 35
         }
     },
 
@@ -209,14 +210,14 @@ const CardsData = {
             hp: 340,
             damage: 130,
             attackSpeed: 1.4,
-            moveSpeed: 55,
-            range: 100,
+            moveSpeed: 32,         // Diperlambat dari 55
+            range: 120,
             size: 15,
             attackType: 'ranged',
             targetType: 'ground',
             targets: 'all',
             count: 1,
-            splashRadius: 40
+            splashRadius: 45
         }
     },
 
@@ -233,14 +234,14 @@ const CardsData = {
             hp: 80,
             damage: 50,
             attackSpeed: 1.1,
-            moveSpeed: 85,         // Very fast
+            moveSpeed: 52,         // Diperlambat dari 85
             range: 20,
             size: 12,
             attackType: 'melee',
             targetType: 'ground',
             targets: 'all',
             count: 3,
-            spawnSpread: 15
+            spawnSpread: 18
         }
     },
 
@@ -257,15 +258,15 @@ const CardsData = {
             hp: 1000,
             damage: 245,
             attackSpeed: 1.5,
-            moveSpeed: 55,
-            chargeSpeed: 110,      // Speed saat charge
+            moveSpeed: 32,         // Diperlambat dari 55
+            chargeSpeed: 65,       // Diperlambat dari 110
             range: 25,
-            size: 20,
+            size: 22,
             attackType: 'melee',
             targetType: 'ground',
             targets: 'all',
             count: 1,
-            chargeDistance: 100,   // Jarak untuk mulai charge
+            chargeDistance: 120,
             chargeDamageMultiplier: 2
         }
     },
@@ -283,9 +284,9 @@ const CardsData = {
             hp: 800,
             damage: 150,
             attackSpeed: 1.6,
-            moveSpeed: 95,         // Very fast
+            moveSpeed: 58,         // Diperlambat dari 95
             range: 25,
-            size: 18,
+            size: 20,
             attackType: 'melee',
             targetType: 'ground',
             targets: 'buildings',
@@ -313,30 +314,18 @@ const DefaultDeck = [
 // HELPER FUNCTIONS
 // ========================================
 
-/**
- * Get card data by ID
- */
 function getCardById(cardId) {
     return CardsData[cardId] || null;
 }
 
-/**
- * Get all cards as array
- */
 function getAllCards() {
     return Object.values(CardsData);
 }
 
-/**
- * Get cards by rarity
- */
 function getCardsByRarity(rarity) {
     return Object.values(CardsData).filter(card => card.rarity === rarity);
 }
 
-/**
- * Calculate average elixir cost of a deck
- */
 function calculateAverageElixir(deckIds) {
     if (!deckIds || deckIds.length === 0) return 0;
     const total = deckIds.reduce((sum, id) => {

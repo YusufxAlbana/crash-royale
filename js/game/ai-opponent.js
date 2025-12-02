@@ -48,9 +48,9 @@ class AIOpponent {
      * Check if AI should be in defend mode
      */
     checkDefendMode(gameState) {
-        // Count player troops in enemy territory
+        // Count player troops in enemy territory (disesuaikan dengan arena lebih besar)
         const threateningTroops = gameState.playerTroops.filter(t => 
-            t.y < GameConfig.ARENA.BRIDGE_Y + 50
+            t.y < GameConfig.ARENA.BRIDGE_Y + 80
         );
         
         this.defendMode = threateningTroops.length > 0;
@@ -100,9 +100,9 @@ class AIOpponent {
      * Choose defensive card
      */
     chooseDefensiveCard(playableCards, gameState) {
-        // Find threatening troops
+        // Find threatening troops (disesuaikan dengan arena lebih besar)
         const threats = gameState.playerTroops.filter(t => 
-            t.y < GameConfig.ARENA.BRIDGE_Y + 100
+            t.y < GameConfig.ARENA.BRIDGE_Y + 130
         );
         
         if (threats.length === 0) {
@@ -290,25 +290,25 @@ class AIOpponent {
     }
 
     /**
-     * Set difficulty
+     * Set difficulty (disesuaikan dengan tempo lebih lambat)
      */
     setDifficulty(difficulty) {
         this.difficulty = difficulty;
         
         switch (difficulty) {
             case 'easy':
-                this.reactionTime = 2000;
-                this.minElixirToPlay = 6;
+                this.reactionTime = 3000;   // Lebih lambat
+                this.minElixirToPlay = 7;
                 this.aggressiveness = 0.3;
                 break;
             case 'normal':
-                this.reactionTime = 1000;
-                this.minElixirToPlay = 4;
+                this.reactionTime = 2000;   // Lebih lambat dari 1000
+                this.minElixirToPlay = 5;
                 this.aggressiveness = 0.5;
                 break;
             case 'hard':
-                this.reactionTime = 500;
-                this.minElixirToPlay = 3;
+                this.reactionTime = 1200;   // Lebih lambat dari 500
+                this.minElixirToPlay = 4;
                 this.aggressiveness = 0.7;
                 break;
         }

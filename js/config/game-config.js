@@ -5,72 +5,72 @@
 
 const GameConfig = {
     // ========================================
-    // ARENA SETTINGS
+    // ARENA SETTINGS (Diperbesar)
     // ========================================
     ARENA: {
-        WIDTH: 360,           // Lebar arena dalam pixel
-        HEIGHT: 640,          // Tinggi arena dalam pixel
-        LANE_WIDTH: 140,      // Lebar setiap lane
-        BRIDGE_Y: 320,        // Posisi Y jembatan (tengah arena)
-        RIVER_HEIGHT: 40,     // Tinggi sungai
+        WIDTH: 450,           // Lebar arena dalam pixel (diperbesar dari 360)
+        HEIGHT: 800,          // Tinggi arena dalam pixel (diperbesar dari 640)
+        LANE_WIDTH: 180,      // Lebar setiap lane
+        BRIDGE_Y: 400,        // Posisi Y jembatan (tengah arena)
+        RIVER_HEIGHT: 50,     // Tinggi sungai
         
         // Batas spawn area untuk player (bagian bawah)
-        PLAYER_SPAWN_MIN_Y: 400,
-        PLAYER_SPAWN_MAX_Y: 600,
+        PLAYER_SPAWN_MIN_Y: 500,
+        PLAYER_SPAWN_MAX_Y: 750,
         
         // Batas spawn area untuk enemy (bagian atas)
-        ENEMY_SPAWN_MIN_Y: 40,
-        ENEMY_SPAWN_MAX_Y: 240,
+        ENEMY_SPAWN_MIN_Y: 50,
+        ENEMY_SPAWN_MAX_Y: 300,
     },
 
     // ========================================
-    // TOWER POSITIONS
+    // TOWER POSITIONS (Disesuaikan dengan arena baru)
     // ========================================
     TOWERS: {
         // Player towers (bawah)
         PLAYER: {
-            LEFT: { x: 72, y: 520 },
-            RIGHT: { x: 288, y: 520 },
-            KING: { x: 180, y: 590 }
+            LEFT: { x: 90, y: 650 },
+            RIGHT: { x: 360, y: 650 },
+            KING: { x: 225, y: 740 }
         },
         // Enemy towers (atas)
         ENEMY: {
-            LEFT: { x: 72, y: 120 },
-            RIGHT: { x: 288, y: 120 },
-            KING: { x: 180, y: 50 }
+            LEFT: { x: 90, y: 150 },
+            RIGHT: { x: 360, y: 150 },
+            KING: { x: 225, y: 60 }
         }
     },
 
     // ========================================
-    // TOWER STATS
+    // TOWER STATS (Disesuaikan dengan arena lebih besar)
     // ========================================
     TOWER_STATS: {
         PRINCESS: {
             hp: 1400,
             damage: 90,
-            attackSpeed: 0.8,    // Attacks per second
-            range: 120,
-            size: 35
+            attackSpeed: 0.8,
+            range: 150,          // Diperbesar dari 120
+            size: 40             // Diperbesar dari 35
         },
         KING: {
             hp: 2400,
             damage: 110,
             attackSpeed: 1.0,
-            range: 130,
-            size: 45,
-            activationRange: 150  // Range untuk aktivasi king tower
+            range: 160,          // Diperbesar dari 130
+            size: 50,            // Diperbesar dari 45
+            activationRange: 180 // Diperbesar dari 150
         }
     },
 
     // ========================================
-    // ELIXIR SETTINGS
+    // ELIXIR SETTINGS (Diperlambat)
     // ========================================
     ELIXIR: {
         MAX: 10,
         START: 5,
-        REGEN_RATE: 0.033,      // Elixir per frame (sekitar 2.8 detik per elixir)
-        OVERTIME_REGEN_RATE: 0.066,  // 2x lebih cepat saat overtime
-        DOUBLE_ELIXIR_REGEN: 0.066   // Double elixir rate
+        REGEN_RATE: 0.014,      // Elixir per frame (sekitar 4.2 detik per elixir - diperlambat)
+        OVERTIME_REGEN_RATE: 0.028,  // 2x lebih cepat saat overtime
+        DOUBLE_ELIXIR_REGEN: 0.028   // Double elixir rate
     },
 
     // ========================================
