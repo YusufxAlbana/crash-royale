@@ -91,48 +91,50 @@
         </div>
         
         <div class="menu-content">
-            <!-- LEFT COLUMN - Stats & Info -->
+            <!-- LEFT COLUMN - Friends -->
             <div class="home-column left-col">
-                <!-- Battle Stats -->
-                <div class="home-panel stats-panel">
-                    <h3>📊 Battle Stats</h3>
-                    <div class="stats-grid">
-                        <div class="stat-box win">
-                            <span class="stat-number" id="stat-wins">0</span>
-                            <span class="stat-label">Wins</span>
-                        </div>
-                        <div class="stat-box lose">
-                            <span class="stat-number" id="stat-losses">0</span>
-                            <span class="stat-label">Losses</span>
-                        </div>
-                        <div class="stat-box">
-                            <span class="stat-number" id="stat-winrate">0%</span>
-                            <span class="stat-label">Win Rate</span>
-                        </div>
-                        <div class="stat-box crown">
-                            <span class="stat-number" id="stat-crowns">0</span>
-                            <span class="stat-label">3-Crowns</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Current Deck Preview -->
-                <div class="home-panel deck-panel">
+                <!-- Friends Panel -->
+                <div class="home-panel friends-panel">
                     <div class="panel-header">
-                        <h3>🎴 Your Deck</h3>
-                        <span class="deck-elixir">⚡ <span id="menu-avg-elixir">0.0</span></span>
+                        <h3>👥 Friends</h3>
+                        <span class="friend-count" id="friend-count">0</span>
                     </div>
-                    <div class="deck-preview" id="menu-deck-preview">
-                        <!-- Will be populated by JS -->
+                    
+                    <!-- Friend Actions -->
+                    <div class="friend-actions">
+                        <button class="friend-action-btn" id="add-friend-btn">
+                            <span>➕</span> Add Friend
+                        </button>
+                        <button class="friend-action-btn" id="friend-requests-btn">
+                            <span>📩</span> Requests <span class="request-badge" id="request-count">0</span>
+                        </button>
                     </div>
-                    <button id="deck-btn" class="panel-btn">Edit Deck</button>
+                    
+                    <!-- Friends List -->
+                    <div class="friends-list" id="friends-list">
+                        <div class="empty-friends">
+                            <span class="empty-icon">👥</span>
+                            <p>No friends yet</p>
+                            <p class="empty-hint">Add friends to battle together!</p>
+                        </div>
+                    </div>
                 </div>
                 
-                <!-- Tips -->
-                <div class="home-panel tip-panel">
-                    <div class="tip-content">
-                        <span class="tip-icon">💡</span>
-                        <span class="tip-text" id="daily-tip">Place troops behind your King Tower for a stronger push!</span>
+                <!-- Battle Stats (compact) -->
+                <div class="home-panel stats-panel compact">
+                    <div class="stats-row">
+                        <div class="stat-mini win">
+                            <span class="stat-number" id="stat-wins">0</span>
+                            <span class="stat-label">W</span>
+                        </div>
+                        <div class="stat-mini lose">
+                            <span class="stat-number" id="stat-losses">0</span>
+                            <span class="stat-label">L</span>
+                        </div>
+                        <div class="stat-mini">
+                            <span class="stat-number" id="stat-winrate">0%</span>
+                            <span class="stat-label">Rate</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -196,62 +198,28 @@
                 </div>
             </div>
             
-            <!-- RIGHT COLUMN - Leaderboard & Chests -->
+            <!-- RIGHT COLUMN - Chat & Quick Actions -->
             <div class="home-column right-col">
-                <!-- Leaderboard Preview -->
-                <div class="home-panel leaderboard-panel">
-                    <h3>🏆 Top Players</h3>
-                    <div class="leaderboard-list">
-                        <div class="lb-item rank-1">
-                            <span class="lb-rank">🥇</span>
-                            <span class="lb-name">ProPlayer123</span>
-                            <span class="lb-score">5,432</span>
-                        </div>
-                        <div class="lb-item rank-2">
-                            <span class="lb-rank">🥈</span>
-                            <span class="lb-name">ArenaKing</span>
-                            <span class="lb-score">5,210</span>
-                        </div>
-                        <div class="lb-item rank-3">
-                            <span class="lb-rank">🥉</span>
-                            <span class="lb-name">BattleMaster</span>
-                            <span class="lb-score">4,987</span>
-                        </div>
-                        <div class="lb-item your-rank">
-                            <span class="lb-rank">#--</span>
-                            <span class="lb-name">You</span>
-                            <span class="lb-score" id="lb-your-trophies">0</span>
+                <!-- Quick Chat / Messages -->
+                <div class="home-panel chat-panel">
+                    <div class="panel-header">
+                        <h3>💬 Messages</h3>
+                        <span class="unread-badge" id="unread-count">0</span>
+                    </div>
+                    <div class="chat-list" id="chat-list">
+                        <div class="empty-chat">
+                            <span class="empty-icon">💬</span>
+                            <p>No messages</p>
                         </div>
                     </div>
+                    <button class="panel-btn" id="open-chat-btn">Open Chat</button>
                 </div>
                 
-                <!-- Chest Section -->
-                <div class="home-panel chest-panel">
-                    <h3>📦 Chests</h3>
-                    <div class="chest-slots">
-                        <div class="chest-slot ready">
-                            <div class="chest-icon">🎁</div>
-                            <div class="chest-info">
-                                <span class="chest-type">Silver</span>
-                                <span class="chest-status">OPEN!</span>
-                            </div>
-                        </div>
-                        <div class="chest-slot empty">
-                            <div class="chest-icon">➕</div>
-                            <div class="chest-info">
-                                <span class="chest-type">Empty</span>
-                                <span class="chest-status">Win to earn</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Online Status -->
-                <div class="home-panel online-panel">
-                    <div class="online-indicator">
-                        <span class="pulse-dot"></span>
-                        <span class="online-count" id="online-count">1,234</span>
-                        <span class="online-label">Players Online</span>
+                <!-- Tips -->
+                <div class="home-panel tip-panel">
+                    <div class="tip-content">
+                        <span class="tip-icon">💡</span>
+                        <span class="tip-text" id="daily-tip">Place troops behind your King Tower!</span>
                     </div>
                 </div>
             </div>
@@ -371,6 +339,77 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Friends Screen -->
+    <div id="friends-screen" class="">
+        <div class="screen-header">
+            <button class="btn-back" id="friends-back">←</button>
+            <h2>👥 Friends</h2>
+            <button class="header-btn" id="add-friend-header-btn">➕</button>
+        </div>
+        <div class="friends-screen-content">
+            <!-- Tabs -->
+            <div class="friends-tabs">
+                <button class="friends-tab active" data-tab="all">All Friends</button>
+                <button class="friends-tab" data-tab="online">Online</button>
+                <button class="friends-tab" data-tab="requests">Requests <span class="tab-badge" id="tab-request-count">0</span></button>
+            </div>
+            
+            <!-- Search -->
+            <div class="friends-search">
+                <input type="text" id="friend-search" placeholder="🔍 Search friends...">
+            </div>
+            
+            <!-- Friends List -->
+            <div class="friends-full-list" id="friends-full-list">
+                <!-- Will be populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Friend Modal -->
+    <div id="add-friend-modal" class="modal">
+        <div class="modal-content">
+            <h2>➕ Add Friend</h2>
+            <p class="modal-hint">Enter username or friend code</p>
+            <input type="text" id="add-friend-input" placeholder="Username or #CODE">
+            <div class="modal-buttons">
+                <button class="btn-secondary" id="cancel-add-friend">Cancel</button>
+                <button class="btn-primary" id="confirm-add-friend">Send Request</button>
+            </div>
+            <p class="modal-error" id="add-friend-error"></p>
+            
+            <div class="your-friend-code">
+                <p>Your Friend Code:</p>
+                <div class="friend-code-display">
+                    <span id="my-friend-code">#ABC123</span>
+                    <button class="copy-btn" id="copy-friend-code">📋</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Screen -->
+    <div id="chat-screen" class="screen">
+        <div class="screen-header">
+            <button class="btn-back" id="chat-back">←</button>
+            <div class="chat-header-info">
+                <span class="chat-avatar" id="chat-avatar">👤</span>
+                <div class="chat-header-details">
+                    <span class="chat-name" id="chat-friend-name">Friend</span>
+                    <span class="chat-status" id="chat-friend-status">Online</span>
+                </div>
+            </div>
+            <button class="header-btn" id="battle-friend-btn">⚔️</button>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <!-- Messages will be populated by JS -->
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Type a message...">
+            <button class="send-btn" id="send-message-btn">📤</button>
         </div>
     </div>
 
@@ -531,6 +570,7 @@
     <script src="js/services/firebase-service.js"></script>
     <script src="js/services/auth-service.js"></script>
     <script src="js/services/matchmaking-service.js"></script>
+    <script src="js/services/friends-service.js"></script>
     <script src="js/game/utils.js"></script>
     <script src="js/game/entity.js"></script>
     <script src="js/game/troop.js"></script>

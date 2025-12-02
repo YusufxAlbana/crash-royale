@@ -20,7 +20,9 @@ const ScreenManager = {
             history: document.getElementById('history-screen'),
             matchmaking: document.getElementById('matchmaking-screen'),
             game: document.getElementById('game-screen'),
-            profile: document.getElementById('profile-screen')
+            profile: document.getElementById('profile-screen'),
+            friends: document.getElementById('friends-screen'),
+            chat: document.getElementById('chat-screen')
         };
 
         // Setup auth tabs

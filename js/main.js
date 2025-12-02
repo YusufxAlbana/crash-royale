@@ -184,6 +184,11 @@ async function handleUserLogin(user) {
             DeckBuilder.init();
         }
         
+        // Initialize friends service
+        if (window.FriendsService) {
+            FriendsService.init();
+        }
+        
         // Initialize home screen content
         initHomeScreen();
         
@@ -294,23 +299,10 @@ function updateArenaInfo() {
 }
 
 /**
- * Simulate online player count
+ * Update online count - removed, now using friends system
  */
 function updateOnlineCount() {
-    const countEl = document.getElementById('online-count');
-    if (!countEl) return;
-    
-    // Random count between 800-2000
-    const baseCount = 1200;
-    const variance = Math.floor(Math.random() * 800) - 400;
-    countEl.textContent = (baseCount + variance).toLocaleString();
-    
-    // Update periodically
-    setInterval(() => {
-        const current = parseInt(countEl.textContent.replace(',', ''));
-        const change = Math.floor(Math.random() * 50) - 25;
-        countEl.textContent = Math.max(500, current + change).toLocaleString();
-    }, 5000);
+    // No longer needed - friends panel shows online friends
 }
 
 /**
