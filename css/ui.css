@@ -792,3 +792,105 @@
 .screen-header .btn-save {
     margin-left: auto;
 }
+
+
+/* ============================================
+   DRAG & DROP STYLES
+   ============================================ */
+
+/* Dragging state */
+body.is-dragging {
+    cursor: grabbing !important;
+    user-select: none;
+}
+
+body.is-dragging * {
+    cursor: grabbing !important;
+}
+
+/* Cards are draggable */
+.deck-card:not(.empty),
+.available-card:not(.in-deck) {
+    cursor: grab;
+}
+
+.deck-card:not(.empty):active,
+.available-card:not(.in-deck):active {
+    cursor: grabbing;
+}
+
+/* Drop zone indicator */
+.deck-card.drop-zone {
+    position: relative;
+}
+
+.deck-card.drop-highlight {
+    border-color: #4caf50 !important;
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.6) !important;
+    transform: scale(1.05);
+}
+
+.deck-card.drop-highlight::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(76, 175, 80, 0.2);
+    border-radius: 8px;
+    pointer-events: none;
+    animation: drop-pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes drop-pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+}
+
+/* Drag preview card */
+.drag-preview-card {
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.5));
+}
+
+.drag-preview-card .deck-card {
+    animation: drag-float 0.3s ease-out;
+}
+
+@keyframes drag-float {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Available card being dragged from */
+.available-card.dragging-source {
+    opacity: 0.3;
+    transform: scale(0.95);
+}
+
+/* Deck slot empty highlight when dragging */
+body.is-dragging .deck-card.empty {
+    border-color: #4a90d9;
+    border-style: solid;
+    animation: empty-slot-pulse 1s ease-in-out infinite;
+}
+
+@keyframes empty-slot-pulse {
+    0%, 100% { 
+        border-color: #4a90d9;
+        box-shadow: 0 0 10px rgba(74, 144, 217, 0.3);
+    }
+    50% { 
+        border-color: #6ab0f9;
+        box-shadow: 0 0 20px rgba(74, 144, 217, 0.5);
+    }
+}
+
+/* Touch feedback */
+@media (hover: none) {
+    .deck-card:active,
+    .available-card:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+}

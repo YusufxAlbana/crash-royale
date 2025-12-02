@@ -7,6 +7,10 @@ const DeckBuilder = {
     currentDeck: [],
     maxDeckSize: 8,
     selectedSlot: null,
+    draggedCard: null,
+    draggedFromDeck: false,
+    draggedIndex: -1,
+    dragPreview: null,
 
     /**
      * Initialize deck builder
@@ -15,13 +19,39 @@ const DeckBuilder = {
         this.loadDeck();
         this.render();
         this.setupEventListeners();
+        this.createDragPreview();
+    },
+
+    /**
+     * Create drag preview element
+     */
+    createDragPreview() {
+        if (this.dragPreview) return;
+        
+        this.dragPreview = document.createElement('div');
+        this.dragPreview.className = 'drag-preview-card';
+        this.dragPreview.style.cssText = `
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.9;
+            transform: translate(-50%, -50%) scale(1.1);
+            display: none;
+        `;
+        document.body.appendChild(this.dragPreview);
     },
 
     /**
      * Setup event listeners
      */
     setupEventListeners() {
-        // Scroll sudah dihandle di CSS
+        // Global mouse/touch move for drag
+        document.addEventListener('mousemove', (e) => this.handleDragMove(e));
+        document.addEventListener('touchmove', (e) => this.handleDragMove(e), { passive: false });
+        
+        // Global mouse/touch up for drop
+        document.addEventListener('mouseup', (e) => this.handleDrop(e));
+        document.addEventListener('touchend', (e) => this.handleDrop(e));
     },
 
     /**
@@ -120,13 +150,32 @@ const DeckBuilder = {
         
         container.innerHTML = html;
 
-        // Add click handlers for deck cards (to select for swap)
+        // Add event handlers for deck cards
         container.querySelectorAll('.deck-card').forEach(cardEl => {
+            const index = parseInt(cardEl.dataset.index);
+            const cardId = cardEl.dataset.card;
+            
+            // Click handler (fallback for non-drag)
             cardEl.addEventListener('click', (e) => {
                 if (e.target.classList.contains('remove-btn')) return;
-                const index = parseInt(cardEl.dataset.index);
+                if (this.draggedCard) return; // Ignore if dragging
                 this.selectSlot(index);
             });
+            
+            // Drag start - mouse
+            cardEl.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('remove-btn')) return;
+                if (!cardId) return; // Empty slot
+                e.preventDefault();
+                this.startDrag(cardId, true, index, e);
+            });
+            
+            // Drag start - touch
+            cardEl.addEventListener('touchstart', (e) => {
+                if (e.target.classList.contains('remove-btn')) return;
+                if (!cardId) return;
+                this.startDrag(cardId, true, index, e);
+            }, { passive: true });
         });
 
         // Add click handlers for remove buttons
@@ -167,12 +216,26 @@ const DeckBuilder = {
             `;
         }).join('');
 
-        // Add click handlers
+        // Add event handlers for available cards
         container.querySelectorAll('.available-card').forEach(cardEl => {
+            const cardId = cardEl.dataset.card;
+            
+            // Click handler (fallback)
             cardEl.addEventListener('click', () => {
-                const cardId = cardEl.dataset.card;
+                if (this.draggedCard) return;
                 this.handleCardClick(cardId);
             });
+            
+            // Drag start - mouse
+            cardEl.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                this.startDrag(cardId, false, -1, e);
+            });
+            
+            // Drag start - touch
+            cardEl.addEventListener('touchstart', (e) => {
+                this.startDrag(cardId, false, -1, e);
+            }, { passive: true });
         });
     },
 
@@ -316,6 +379,204 @@ const DeckBuilder = {
             const validDeck = this.currentDeck.filter(c => c);
             avgEl.textContent = calculateAverageElixir(validDeck);
         }
+    },
+
+    /**
+     * Start dragging a card
+     */
+    startDrag(cardId, fromDeck, index, e) {
+        const card = getCardById(cardId);
+        if (!card) return;
+        
+        this.draggedCard = cardId;
+        this.draggedFromDeck = fromDeck;
+        this.draggedIndex = index;
+        
+        // Show drag preview
+        if (this.dragPreview) {
+            this.dragPreview.innerHTML = `
+                <div class="deck-card ${card.rarity}" style="width: 70px; pointer-events: none;">
+                    <div class="card-rarity-bar ${card.rarity}"></div>
+                    <div class="card-icon">${card.icon}</div>
+                    <div class="card-cost">${card.elixirCost}</div>
+                    <div class="card-name">${card.name}</div>
+                </div>
+            `;
+            this.dragPreview.style.display = 'block';
+            
+            const pos = this.getEventPosition(e);
+            this.dragPreview.style.left = pos.x + 'px';
+            this.dragPreview.style.top = pos.y + 'px';
+        }
+        
+        // Add dragging class to body
+        document.body.classList.add('is-dragging');
+        
+        // Highlight drop zones
+        this.highlightDropZones();
+    },
+
+    /**
+     * Handle drag move
+     */
+    handleDragMove(e) {
+        if (!this.draggedCard) return;
+        
+        if (e.type === 'touchmove') {
+            e.preventDefault();
+        }
+        
+        const pos = this.getEventPosition(e);
+        
+        if (this.dragPreview) {
+            this.dragPreview.style.left = pos.x + 'px';
+            this.dragPreview.style.top = pos.y + 'px';
+        }
+        
+        // Highlight hovered drop zone
+        this.updateDropZoneHighlight(pos);
+    },
+
+    /**
+     * Handle drop
+     */
+    handleDrop(e) {
+        if (!this.draggedCard) return;
+        
+        const pos = this.getEventPosition(e);
+        const dropTarget = this.getDropTarget(pos);
+        
+        if (dropTarget) {
+            if (dropTarget.type === 'deck-slot') {
+                this.dropOnDeckSlot(dropTarget.index);
+            } else if (dropTarget.type === 'available') {
+                // Dropping on available cards area - remove from deck if from deck
+                if (this.draggedFromDeck) {
+                    this.removeFromDeck(this.draggedIndex);
+                }
+            }
+        }
+        
+        // Clean up
+        this.endDrag();
+    },
+
+    /**
+     * Drop card on deck slot
+     */
+    dropOnDeckSlot(targetIndex) {
+        const inDeck = this.currentDeck.includes(this.draggedCard);
+        
+        if (this.draggedFromDeck) {
+            // Reordering within deck
+            if (targetIndex !== this.draggedIndex) {
+                const temp = this.currentDeck[targetIndex];
+                this.currentDeck[targetIndex] = this.draggedCard;
+                this.currentDeck[this.draggedIndex] = temp;
+                this.saveDeck();
+            }
+        } else {
+            // Adding from available cards
+            if (inDeck) {
+                // Card already in deck - swap positions
+                const existingIndex = this.currentDeck.indexOf(this.draggedCard);
+                const temp = this.currentDeck[targetIndex];
+                this.currentDeck[targetIndex] = this.draggedCard;
+                this.currentDeck[existingIndex] = temp;
+            } else {
+                // Replace card in slot
+                this.currentDeck[targetIndex] = this.draggedCard;
+            }
+            this.saveDeck();
+        }
+        
+        this.render();
+    },
+
+    /**
+     * End drag operation
+     */
+    endDrag() {
+        this.draggedCard = null;
+        this.draggedFromDeck = false;
+        this.draggedIndex = -1;
+        
+        if (this.dragPreview) {
+            this.dragPreview.style.display = 'none';
+        }
+        
+        document.body.classList.remove('is-dragging');
+        
+        // Remove highlights
+        document.querySelectorAll('.drop-highlight').forEach(el => {
+            el.classList.remove('drop-highlight');
+        });
+    },
+
+    /**
+     * Get event position (mouse or touch)
+     */
+    getEventPosition(e) {
+        if (e.touches && e.touches.length > 0) {
+            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+        }
+        return { x: e.clientX, y: e.clientY };
+    },
+
+    /**
+     * Highlight drop zones
+     */
+    highlightDropZones() {
+        document.querySelectorAll('.deck-card').forEach(el => {
+            el.classList.add('drop-zone');
+        });
+    },
+
+    /**
+     * Update drop zone highlight based on position
+     */
+    updateDropZoneHighlight(pos) {
+        document.querySelectorAll('.drop-highlight').forEach(el => {
+            el.classList.remove('drop-highlight');
+        });
+        
+        const target = this.getDropTarget(pos);
+        if (target && target.element) {
+            target.element.classList.add('drop-highlight');
+        }
+    },
+
+    /**
+     * Get drop target at position
+     */
+    getDropTarget(pos) {
+        // Check deck slots
+        const deckSlots = document.querySelectorAll('.deck-card');
+        for (const slot of deckSlots) {
+            const rect = slot.getBoundingClientRect();
+            if (pos.x >= rect.left && pos.x <= rect.right &&
+                pos.y >= rect.top && pos.y <= rect.bottom) {
+                return {
+                    type: 'deck-slot',
+                    index: parseInt(slot.dataset.index),
+                    element: slot
+                };
+            }
+        }
+        
+        // Check if over available cards area (for removing)
+        const availableArea = document.getElementById('available-cards');
+        if (availableArea) {
+            const rect = availableArea.getBoundingClientRect();
+            if (pos.x >= rect.left && pos.x <= rect.right &&
+                pos.y >= rect.top && pos.y <= rect.bottom) {
+                return { type: 'available', element: availableArea };
+            }
+        }
+        
+        return null;
     }
 };
 
