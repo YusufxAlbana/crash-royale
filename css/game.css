@@ -103,49 +103,112 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.8);
     border-radius: 8px;
+    border: 1px solid rgba(233, 30, 99, 0.3);
 }
 
 #elixir-bar {
     flex: 1;
-    height: 20px;
-    background: #333;
-    border-radius: 10px;
-    overflow: hidden;
-    position: relative;
+    height: 28px;
+    background: #1a1a1a;
+    border-radius: 6px;
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid #333;
 }
 
-#elixir-fill {
+.elixir-slot {
+    flex: 1;
     height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, #e91e63, #ff4081);
-    border-radius: 10px;
-    transition: width 0.1s linear;
+    background: linear-gradient(180deg, #2a2a2a, #1a1a1a);
+    border-radius: 3px;
+    border: 1px solid #333;
     position: relative;
+    overflow: hidden;
+    transition: all 0.2s ease;
 }
 
-#elixir-fill::after {
+.elixir-slot::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 50%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.3), transparent);
-    border-radius: 10px 10px 0 0;
+    bottom: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.1), transparent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.elixir-slot.filled {
+    background: linear-gradient(180deg, #ff6090, #e91e63, #c2185b);
+    border-color: #ff80ab;
+    box-shadow: 0 0 10px rgba(233, 30, 99, 0.5), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.elixir-slot.filled::before {
+    opacity: 1;
+}
+
+.elixir-slot.filling {
+    animation: elixirFill 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes elixirFill {
+    0% { 
+        transform: scale(0.5); 
+        background: #ff80ab;
+        box-shadow: 0 0 20px rgba(255, 128, 171, 0.8);
+    }
+    50% { 
+        transform: scale(1.15);
+        box-shadow: 0 0 25px rgba(233, 30, 99, 0.9);
+    }
+    100% { 
+        transform: scale(1);
+    }
+}
+
+/* Glow effect when full */
+#elixir-bar.full {
+    box-shadow: 0 0 15px rgba(233, 30, 99, 0.6);
+    animation: elixirFullPulse 1s ease-in-out infinite;
+}
+
+@keyframes elixirFullPulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(233, 30, 99, 0.4); }
+    50% { box-shadow: 0 0 20px rgba(233, 30, 99, 0.7); }
+}
+
+#elixir-fill-old {
+    display: none;
 }
 
 #elixir-count {
-    font-size: 1.25rem;
+    font-size: 1.4rem;
     font-weight: bold;
-    min-width: 25px;
+    min-width: 30px;
     text-align: center;
     color: #ff4081;
+    text-shadow: 0 0 10px rgba(233, 30, 99, 0.5);
+    transition: all 0.2s ease;
+}
+
+#elixir-count.full {
+    color: #ff80ab;
+    text-shadow: 0 0 15px rgba(255, 128, 171, 0.8);
+    animation: elixirCountPulse 0.8s ease-in-out infinite;
+}
+
+@keyframes elixirCountPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
 }
 
 .elixir-icon {
-    font-size: 1.25rem;
+    font-size: 1.3rem;
 }
 
 /* Card Hand */
@@ -219,8 +282,39 @@
 }
 
 .card-slot.unaffordable {
-    opacity: 0.5;
-    filter: grayscale(50%);
+    opacity: 0.7;
+    filter: grayscale(30%);
+}
+
+.card-slot.unaffordable:hover {
+    transform: translateY(-3px);
+    opacity: 0.85;
+}
+
+.card-slot.unaffordable.selected {
+    transform: translateY(-8px);
+    border-color: #ff9800;
+    box-shadow: 0 8px 20px rgba(255, 152, 0, 0.5);
+}
+
+/* Not enough elixir flash effect */
+.card-slot.not-enough-elixir {
+    animation: notEnoughElixir 0.5s ease;
+}
+
+@keyframes notEnoughElixir {
+    0% { 
+        box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.8);
+        border-color: #f44336;
+    }
+    50% { 
+        box-shadow: 0 0 20px 5px rgba(244, 67, 54, 0.6);
+        border-color: #f44336;
+        transform: translateY(-3px) scale(1.02);
+    }
+    100% { 
+        box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+    }
 }
 
 .card-slot.empty {
@@ -235,6 +329,7 @@
     justify-content: center;
     width: 100%;
     height: 100%;
+    pointer-events: none;
 }
 
 .card-slot .card-icon {
@@ -256,6 +351,18 @@
     font-weight: bold;
     border: 2px solid #fff;
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+.card-slot .card-name {
+    font-size: 0.55rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 2px;
 }
 
 /* Game Card Styles */

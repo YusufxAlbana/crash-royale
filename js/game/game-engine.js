@@ -82,6 +82,11 @@ class GameEngine {
         // Messages
         this.messages = [];
         
+        // Recording system
+        this.isRecording = true;
+        this.recordedActions = [];
+        this.recordStartTime = 0;
+        
         // Bind methods
         this.gameLoop = this.gameLoop.bind(this);
         this.handleMouseDown = this.handleMouseDown.bind(this);
@@ -103,9 +108,12 @@ class GameEngine {
         // Reset game state
         this.resetGameState();
         
-        // Set player deck
-        this.playerState.deck = playerDeck ? [...playerDeck] : [...DefaultDeck];
+        // Set player deck - store original for reshuffling
+        this.originalDeck = playerDeck ? [...playerDeck] : [...DefaultDeck];
+        this.playerState.deck = [...this.originalDeck];
         this.enemyState.deck = GameUtils.shuffle([...DefaultDeck]);
+        
+        console.log('Player deck:', this.playerState.deck);
         
         // Initialize hands
         this.initializeHands();
@@ -124,7 +132,7 @@ class GameEngine {
         // Resize canvas
         this.canvasScale = this.arena.resize();
         
-        console.log('Game initialized');
+        console.log('Game initialized with hand:', this.playerState.hand);
     }
 
 
@@ -155,6 +163,10 @@ class GameEngine {
         this.playerState.selectedCard = null;
         
         this.messages = [];
+        
+        // Reset recording
+        this.recordedActions = [];
+        this.recordStartTime = Date.now();
     }
 
     /**
@@ -458,13 +470,44 @@ class GameEngine {
             }
         }
         
-        // Update elixir display
-        const elixirFill = document.getElementById('elixir-fill');
+        // Update elixir display with slots
+        const elixirBar = document.getElementById('elixir-bar');
         const elixirCount = document.getElementById('elixir-count');
-        if (elixirFill && elixirCount) {
-            const percent = (this.playerState.elixir / GameConfig.ELIXIR.MAX) * 100;
-            elixirFill.style.width = `${percent}%`;
-            elixirCount.textContent = Math.floor(this.playerState.elixir);
+        
+        if (elixirBar && elixirCount) {
+            const currentElixir = Math.floor(this.playerState.elixir);
+            const slots = elixirBar.querySelectorAll('.elixir-slot');
+            
+            slots.forEach((slot, index) => {
+                const wasFilled = slot.classList.contains('filled');
+                const shouldBeFilled = index < currentElixir;
+                
+                if (shouldBeFilled && !wasFilled) {
+                    // Just filled - add animation
+                    slot.classList.add('filled', 'filling');
+                    setTimeout(() => slot.classList.remove('filling'), 400);
+                } else if (shouldBeFilled) {
+                    slot.classList.add('filled');
+                } else {
+                    slot.classList.remove('filled', 'filling');
+                }
+            });
+            
+            // Add/remove full class for glow effect
+            if (currentElixir >= 10) {
+                elixirBar.classList.add('full');
+                elixirCount.classList.add('full');
+            } else {
+                elixirBar.classList.remove('full');
+                elixirCount.classList.remove('full');
+            }
+            
+            elixirCount.textContent = currentElixir;
+        }
+        
+        // Update card affordability
+        if (window.GameUI && this.playerState.hand) {
+            window.GameUI.updateCardHand(this.playerState.hand, this.playerState.nextCard);
         }
     }
 
@@ -503,8 +546,8 @@ class GameEngine {
         // Draw effects
         this.renderEffects();
         
-        // Draw drag indicator
-        if (this.isDragging && this.dragCard) {
+        // Draw drag indicator (show preview when card is selected)
+        if (this.dragCard && this.playerState.selectedCard !== null) {
             this.renderDragIndicator();
         }
         
@@ -540,16 +583,33 @@ class GameEngine {
      * Render drag indicator
      */
     renderDragIndicator() {
-        const isValid = GameUtils.isValidPlayerSpawn(this.dragX, this.dragY);
-        this.arena.drawSpawnIndicator(this.dragX, this.dragY, isValid);
+        const cardData = getCardById(this.dragCard);
+        if (!cardData) return;
+        
+        const isValidPosition = GameUtils.isValidPlayerSpawn(this.dragX, this.dragY);
+        const hasEnoughElixir = this.playerState.elixir >= cardData.elixirCost;
+        const isValid = isValidPosition && hasEnoughElixir;
+        
+        // Draw spawn indicator with appropriate color
+        this.arena.drawSpawnIndicator(this.dragX, this.dragY, isValid, !hasEnoughElixir);
         
         // Draw card icon at drag position
-        const cardData = getCardById(this.dragCard);
-        if (cardData) {
-            this.ctx.font = '30px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(cardData.icon, this.dragX, this.dragY);
+        this.ctx.font = '30px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        
+        // Dim icon if not enough elixir
+        if (!hasEnoughElixir) {
+            this.ctx.globalAlpha = 0.5;
+        }
+        this.ctx.fillText(cardData.icon, this.dragX, this.dragY);
+        this.ctx.globalAlpha = 1;
+        
+        // Show elixir cost needed
+        if (!hasEnoughElixir && isValidPosition) {
+            this.ctx.font = 'bold 14px Arial';
+            this.ctx.fillStyle = '#ff4444';
+            this.ctx.fillText(`Need ${cardData.elixirCost} elixir`, this.dragX, this.dragY + 35);
         }
     }
 
@@ -578,6 +638,18 @@ class GameEngine {
         const cardData = getCardById(cardId);
         if (!cardData) return null;
         
+        // Record action for replay
+        if (this.isRecording) {
+            this.recordAction({
+                type: 'spawn',
+                cardId: cardId,
+                x: x,
+                y: y,
+                team: team,
+                time: Date.now() - this.recordStartTime
+            });
+        }
+        
         const troops = [];
         const count = cardData.stats.count || 1;
         const spread = cardData.stats.spawnSpread || 0;
@@ -605,6 +677,27 @@ class GameEngine {
         
         return troops;
     }
+    
+    /**
+     * Record action for replay
+     */
+    recordAction(action) {
+        if (this.isRecording && this.recordedActions) {
+            this.recordedActions.push(action);
+        }
+    }
+    
+    /**
+     * Get recorded replay data
+     */
+    getReplayData() {
+        return {
+            actions: this.recordedActions,
+            duration: Date.now() - this.recordStartTime,
+            playerDeck: this.playerState.deck,
+            result: this.gameState.winner
+        };
+    }
 
     /**
      * Play card (player)
@@ -616,15 +709,17 @@ class GameEngine {
         const cardData = getCardById(cardId);
         if (!cardData) return false;
         
-        // Check elixir
-        if (this.playerState.elixir < cardData.elixirCost) {
-            this.showMessage('Not enough elixir!');
+        // Check spawn position first
+        if (!GameUtils.isValidPlayerSpawn(x, y)) {
+            // Don't show message, just don't play - user is still positioning
             return false;
         }
         
-        // Check spawn position
-        if (!GameUtils.isValidPlayerSpawn(x, y)) {
-            this.showMessage('Invalid spawn position!');
+        // Check elixir
+        if (this.playerState.elixir < cardData.elixirCost) {
+            this.showMessage('Not enough elixir!');
+            // Trigger red flash on card
+            this.triggerNotEnoughElixir(cardIndex);
             return false;
         }
         
@@ -637,13 +732,40 @@ class GameEngine {
         // Rotate cards
         this.rotatePlayerCard(cardIndex);
         
+        // Reset selection
+        this.playerState.selectedCard = null;
+        this.dragCard = null;
+        
+        // Deselect in UI
+        if (window.GameUI) {
+            window.GameUI.deselectCard();
+        }
+        
         return true;
+    }
+
+    /**
+     * Trigger not enough elixir effect on card
+     */
+    triggerNotEnoughElixir(cardIndex) {
+        const activeCards = document.getElementById('active-cards');
+        if (!activeCards) return;
+        
+        const slots = activeCards.querySelectorAll('.card-slot');
+        const slot = slots[cardIndex];
+        if (slot) {
+            slot.classList.add('not-enough-elixir');
+            setTimeout(() => slot.classList.remove('not-enough-elixir'), 500);
+        }
     }
 
     /**
      * Rotate player card
      */
     rotatePlayerCard(cardIndex) {
+        // Get the played card before removing
+        const playedCard = this.playerState.hand[cardIndex];
+        
         // Remove played card
         this.playerState.hand.splice(cardIndex, 1);
         
@@ -656,10 +778,13 @@ class GameEngine {
         if (this.playerState.deck.length > 0) {
             this.playerState.nextCard = this.playerState.deck.shift();
         } else {
-            // Reshuffle played cards
-            this.playerState.deck = GameUtils.shuffle([...DefaultDeck]);
+            // Reshuffle the original deck (not DefaultDeck)
+            this.playerState.deck = GameUtils.shuffle([...this.originalDeck]);
             this.playerState.nextCard = this.playerState.deck.shift();
         }
+        
+        // Put played card back to deck for cycling
+        this.playerState.deck.push(playedCard);
         
         // Update UI
         if (window.updateCardHand) {
@@ -795,27 +920,53 @@ class GameEngine {
         if (!this.gameState.isRunning) return;
         
         const coords = this.getCanvasCoords(e.clientX, e.clientY);
-        this.startDrag(coords.x, coords.y);
+        this.clickStartX = coords.x;
+        this.clickStartY = coords.y;
+        this.dragX = coords.x;
+        this.dragY = coords.y;
+        
+        // If card is selected, try to play immediately on click
+        if (this.playerState.selectedCard !== null) {
+            this.isDragging = true;
+            this.dragCard = this.playerState.hand[this.playerState.selectedCard];
+        }
     }
 
     /**
      * Handle mouse move
      */
     handleMouseMove(e) {
-        if (!this.isDragging) return;
+        if (!this.gameState.isRunning) return;
         
         const coords = this.getCanvasCoords(e.clientX, e.clientY);
-        this.updateDrag(coords.x, coords.y);
+        
+        // Update drag position for preview when card is selected
+        if (this.playerState.selectedCard !== null) {
+            this.dragX = coords.x;
+            this.dragY = coords.y;
+            this.dragCard = this.playerState.hand[this.playerState.selectedCard];
+        }
+        
+        if (this.isDragging) {
+            this.updateDrag(coords.x, coords.y);
+        }
     }
 
     /**
      * Handle mouse up
      */
     handleMouseUp(e) {
-        if (!this.isDragging) return;
+        if (!this.gameState.isRunning) return;
         
         const coords = this.getCanvasCoords(e.clientX, e.clientY);
-        this.endDrag(coords.x, coords.y);
+        
+        // Play card at click/release position if card is selected
+        if (this.playerState.selectedCard !== null) {
+            const success = this.playCard(this.playerState.selectedCard, coords.x, coords.y);
+            // playCard will handle deselection on success
+        }
+        
+        this.isDragging = false;
     }
 
     /**
@@ -827,7 +978,16 @@ class GameEngine {
         
         const touch = e.touches[0];
         const coords = this.getCanvasCoords(touch.clientX, touch.clientY);
-        this.startDrag(coords.x, coords.y);
+        this.clickStartX = coords.x;
+        this.clickStartY = coords.y;
+        this.dragX = coords.x;
+        this.dragY = coords.y;
+        
+        // If card is selected, start dragging
+        if (this.playerState.selectedCard !== null) {
+            this.isDragging = true;
+            this.dragCard = this.playerState.hand[this.playerState.selectedCard];
+        }
     }
 
     /**
@@ -835,11 +995,22 @@ class GameEngine {
      */
     handleTouchMove(e) {
         e.preventDefault();
-        if (!this.isDragging) return;
+        if (!this.gameState.isRunning) return;
         
         const touch = e.touches[0];
         const coords = this.getCanvasCoords(touch.clientX, touch.clientY);
-        this.updateDrag(coords.x, coords.y);
+        
+        // Update drag position
+        if (this.playerState.selectedCard !== null) {
+            this.dragX = coords.x;
+            this.dragY = coords.y;
+            this.dragCard = this.playerState.hand[this.playerState.selectedCard];
+            this.isDragging = true;
+        }
+        
+        if (this.isDragging) {
+            this.updateDrag(coords.x, coords.y);
+        }
     }
 
     /**
@@ -847,17 +1018,23 @@ class GameEngine {
      */
     handleTouchEnd(e) {
         e.preventDefault();
-        if (!this.isDragging) return;
+        if (!this.gameState.isRunning) return;
         
-        this.endDrag(this.dragX, this.dragY);
+        // Play card at last drag position
+        if (this.playerState.selectedCard !== null && this.dragX && this.dragY) {
+            const success = this.playCard(this.playerState.selectedCard, this.dragX, this.dragY);
+            // playCard will handle deselection on success
+        }
+        
+        this.isDragging = false;
     }
 
     /**
      * Start drag
      */
     startDrag(x, y) {
-        // Check if clicking on spawn area
-        if (GameUtils.isValidPlayerSpawn(x, y) && this.playerState.selectedCard !== null) {
+        // If a card is selected, start dragging immediately
+        if (this.playerState.selectedCard !== null) {
             this.isDragging = true;
             this.dragCard = this.playerState.hand[this.playerState.selectedCard];
             this.dragX = x;
@@ -878,12 +1055,17 @@ class GameEngine {
      */
     endDrag(x, y) {
         if (this.dragCard && this.playerState.selectedCard !== null) {
-            this.playCard(this.playerState.selectedCard, x, y);
+            // Try to play card at this position
+            const success = this.playCard(this.playerState.selectedCard, x, y);
+            if (!success) {
+                // Card not played, keep it selected for retry
+                // Don't deselect
+            }
         }
         
         this.isDragging = false;
         this.dragCard = null;
-        this.playerState.selectedCard = null;
+        // Don't deselect card here - let user try again or click another card
     }
 
     /**
@@ -892,6 +1074,15 @@ class GameEngine {
     selectCard(index) {
         if (index >= 0 && index < this.playerState.hand.length) {
             this.playerState.selectedCard = index;
+            this.dragCard = this.playerState.hand[index];
+            
+            // Set initial preview position to center of player spawn area
+            if (!this.dragX || !this.dragY) {
+                this.dragX = GameConfig.ARENA.WIDTH / 2;
+                this.dragY = (GameConfig.ARENA.PLAYER_SPAWN_MIN_Y + GameConfig.ARENA.PLAYER_SPAWN_MAX_Y) / 2;
+            }
+            
+            console.log('Card selected in engine:', index, this.dragCard);
         }
     }
 

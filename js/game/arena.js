@@ -215,15 +215,26 @@ class Arena {
     /**
      * Draw spawn indicator
      */
-    drawSpawnIndicator(x, y, isValid) {
+    drawSpawnIndicator(x, y, isValid, notEnoughElixir = false) {
         const ctx = this.ctx;
         const colors = GameConfig.COLORS;
         
         ctx.beginPath();
         ctx.arc(x, y, 30, 0, Math.PI * 2);
-        ctx.fillStyle = isValid ? colors.SPAWN_VALID : colors.SPAWN_INVALID;
+        
+        if (notEnoughElixir) {
+            // Orange/yellow for not enough elixir
+            ctx.fillStyle = 'rgba(255, 152, 0, 0.3)';
+            ctx.strokeStyle = '#FF9800';
+        } else if (isValid) {
+            ctx.fillStyle = colors.SPAWN_VALID;
+            ctx.strokeStyle = '#4CAF50';
+        } else {
+            ctx.fillStyle = colors.SPAWN_INVALID;
+            ctx.strokeStyle = '#F44336';
+        }
+        
         ctx.fill();
-        ctx.strokeStyle = isValid ? '#4CAF50' : '#F44336';
         ctx.lineWidth = 3;
         ctx.stroke();
     }

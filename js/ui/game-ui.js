@@ -52,18 +52,26 @@ const GameUI = {
             activeCards.appendChild(slot);
         }
 
-        // Add click handlers
-        activeCards.querySelectorAll('.card-slot').forEach(slot => {
-            slot.addEventListener('click', () => {
-                this.selectCard(parseInt(slot.dataset.index));
-            });
+        // Use event delegation on parent container
+        activeCards.onclick = (e) => {
+            const slot = e.target.closest('.card-slot');
+            if (slot) {
+                const index = parseInt(slot.dataset.index);
+                console.log('Card clicked:', index);
+                this.selectCard(index);
+            }
+        };
 
-            // Touch handlers for drag
-            slot.addEventListener('touchstart', (e) => {
+        // Touch handler with event delegation
+        activeCards.ontouchstart = (e) => {
+            const slot = e.target.closest('.card-slot');
+            if (slot) {
                 e.preventDefault();
-                this.selectCard(parseInt(slot.dataset.index));
-            });
-        });
+                const index = parseInt(slot.dataset.index);
+                console.log('Card touched:', index);
+                this.selectCard(index);
+            }
+        };
     },
 
     /**
@@ -73,33 +81,34 @@ const GameUI = {
         const activeCards = document.getElementById('active-cards');
         const nextCardEl = document.getElementById('next-card');
         
-        if (!activeCards) return;
+        if (!activeCards || !hand) return;
 
         // Update active cards
         const slots = activeCards.querySelectorAll('.card-slot');
+        const playerElixir = this.gameEngine?.getPlayerState()?.elixir || 0;
+        
         slots.forEach((slot, index) => {
             const cardId = hand[index];
             const card = cardId ? getCardById(cardId) : null;
             
             if (card) {
+                const isAffordable = playerElixir >= card.elixirCost;
+                const isSelected = this.selectedCardIndex === index;
+                
                 slot.innerHTML = `
                     <div class="card-content" data-card="${cardId}">
-                        <div class="card-icon">${card.icon}</div>
                         <div class="card-cost">${card.elixirCost}</div>
+                        <div class="card-icon">${card.icon}</div>
+                        <div class="card-name">${card.name}</div>
                     </div>
                 `;
                 slot.classList.remove('empty');
-                
-                // Check if affordable
-                const playerElixir = this.gameEngine?.getPlayerState()?.elixir || 0;
-                if (playerElixir >= card.elixirCost) {
-                    slot.classList.remove('unaffordable');
-                } else {
-                    slot.classList.add('unaffordable');
-                }
+                slot.classList.toggle('unaffordable', !isAffordable);
+                slot.classList.toggle('selected', isSelected);
             } else {
                 slot.innerHTML = '<div class="card-content empty"></div>';
                 slot.classList.add('empty');
+                slot.classList.remove('unaffordable', 'selected');
             }
         });
 
@@ -123,6 +132,21 @@ const GameUI = {
         if (!activeCards) return;
 
         const slots = activeCards.querySelectorAll('.card-slot');
+        const slot = slots[index];
+        
+        if (!slot) return;
+        
+        // Check if card is affordable
+        const isUnaffordable = slot.classList.contains('unaffordable');
+        
+        if (isUnaffordable) {
+            // Show red flash effect to indicate not enough elixir
+            slot.classList.add('not-enough-elixir');
+            setTimeout(() => slot.classList.remove('not-enough-elixir'), 500);
+            
+            // Still allow selection for preview, but mark as unaffordable
+            // User can see where they want to place it
+        }
         
         // Deselect all
         slots.forEach(s => s.classList.remove('selected'));
@@ -133,6 +157,7 @@ const GameUI = {
             this.selectedCardIndex = null;
             if (this.gameEngine) {
                 this.gameEngine.deselectCard();
+                this.gameEngine.dragCard = null;
             }
         } else {
             this.selectedCardIndex = index;
@@ -140,7 +165,20 @@ const GameUI = {
             
             if (this.gameEngine) {
                 this.gameEngine.selectCard(index);
+                // Set drag card for preview
+                this.gameEngine.dragCard = this.gameEngine.playerState.hand[index];
             }
+        }
+    },
+    
+    /**
+     * Deselect current card
+     */
+    deselectCard() {
+        this.selectedCardIndex = null;
+        const activeCards = document.getElementById('active-cards');
+        if (activeCards) {
+            activeCards.querySelectorAll('.card-slot').forEach(s => s.classList.remove('selected'));
         }
     },
 
@@ -211,17 +249,24 @@ const GameUI = {
     async updateUserTrophies(trophyChange, gameState) {
         if (!window.currentUser) return;
 
+        // Get replay data from game engine
+        let replayData = null;
+        if (this.gameEngine && this.gameEngine.getReplayData) {
+            replayData = this.gameEngine.getReplayData();
+        }
+
         // Update trophies via AuthService
         if (window.AuthService) {
-            window.currentUser.trophies = AuthService.updateTrophies(trophyChange);
+            window.currentUser.trophies = await AuthService.updateTrophies(trophyChange);
             
-            // Save match result
-            AuthService.saveMatchResult({
+            // Save match result with replay
+            await AuthService.saveMatchResult({
                 result: gameState.winner === 'player' ? 'win' : (gameState.winner === 'draw' ? 'draw' : 'lose'),
                 playerCrowns: gameState.playerCrowns,
                 enemyCrowns: gameState.enemyCrowns,
                 trophyChange: trophyChange,
-                opponentName: 'AI Bot'
+                opponentName: 'AI Bot',
+                replay: replayData
             });
         } else {
             // Fallback

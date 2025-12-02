@@ -169,8 +169,30 @@ const ScreenManager = {
             window.gameEngine = new GameEngine();
         }
         
-        // Get player deck
-        const playerDeck = window.currentUser?.deck || [...DefaultDeck];
+        // Get player deck - prioritize AuthService data
+        let playerDeck = [...DefaultDeck];
+        
+        if (window.AuthService && AuthService.userProfile && AuthService.userProfile.deck) {
+            playerDeck = [...AuthService.userProfile.deck];
+        } else if (window.currentUser && window.currentUser.deck) {
+            playerDeck = [...window.currentUser.deck];
+        }
+        
+        // Validate deck - ensure all cards exist
+        playerDeck = playerDeck.filter(cardId => getCardById(cardId) !== null);
+        
+        // Ensure deck has at least 8 cards
+        while (playerDeck.length < 8) {
+            const allCards = Object.keys(CardsData);
+            const available = allCards.filter(c => !playerDeck.includes(c));
+            if (available.length > 0) {
+                playerDeck.push(available[0]);
+            } else {
+                break;
+            }
+        }
+        
+        console.log('Starting game with deck:', playerDeck);
         
         // Initialize and start
         window.gameEngine.init(playerDeck, true);
@@ -189,6 +211,7 @@ const ScreenManager = {
      */
     async loadMatchHistory() {
         const historyList = document.getElementById('history-list');
+        const historyStats = document.getElementById('history-stats');
         if (!historyList) return;
 
         historyList.innerHTML = '<p class="loading">Loading...</p>';
@@ -200,23 +223,101 @@ const ScreenManager = {
                 matches = AuthService.getMatchHistory();
             }
 
+            // Update stats
+            if (historyStats && window.currentUser && window.currentUser.stats) {
+                const stats = window.currentUser.stats;
+                const total = (stats.wins || 0) + (stats.losses || 0) + (stats.draws || 0);
+                const winRate = total > 0 ? Math.round((stats.wins / total) * 100) : 0;
+                historyStats.innerHTML = `${stats.wins || 0}W / ${stats.losses || 0}L (${winRate}%)`;
+            }
+
             if (matches.length === 0) {
-                historyList.innerHTML = '<p class="empty">No matches yet</p>';
+                historyList.innerHTML = `
+                    <div class="empty-history">
+                        <div class="empty-icon">📜</div>
+                        <p>No matches yet</p>
+                        <p class="empty-hint">Play a battle to see your history!</p>
+                    </div>
+                `;
                 return;
             }
 
-            historyList.innerHTML = matches.map(match => `
-                <div class="history-item ${match.result}">
-                    <div class="match-result">${match.result.toUpperCase()}</div>
-                    <div class="match-score">${match.playerCrowns} - ${match.enemyCrowns}</div>
-                    <div class="match-opponent">vs ${match.opponentName || 'Unknown'}</div>
-                    <div class="match-trophies">${match.trophyChange > 0 ? '+' : ''}${match.trophyChange} 🏆</div>
-                </div>
-            `).join('');
+            historyList.innerHTML = matches.map((match, index) => {
+                const date = new Date(match.timestamp);
+                const timeAgo = this.getTimeAgo(date);
+                const resultClass = match.result === 'win' ? 'victory' : (match.result === 'lose' ? 'defeat' : 'draw');
+                const resultIcon = match.result === 'win' ? '🏆' : (match.result === 'lose' ? '💔' : '🤝');
+                
+                return `
+                    <div class="history-item ${resultClass}" data-index="${index}">
+                        <div class="history-left">
+                            <div class="result-icon">${resultIcon}</div>
+                            <div class="result-info">
+                                <div class="result-text">${match.result.toUpperCase()}</div>
+                                <div class="opponent-name">vs ${match.opponentName || 'AI Bot'}</div>
+                            </div>
+                        </div>
+                        <div class="history-center">
+                            <div class="crown-score">
+                                <span class="player-crowns">${'⭐'.repeat(match.playerCrowns)}${'☆'.repeat(3 - match.playerCrowns)}</span>
+                                <span class="score-divider">-</span>
+                                <span class="enemy-crowns">${'⭐'.repeat(match.enemyCrowns)}${'☆'.repeat(3 - match.enemyCrowns)}</span>
+                            </div>
+                            <div class="match-time">${timeAgo}</div>
+                        </div>
+                        <div class="history-right">
+                            <div class="trophy-change ${match.trophyChange >= 0 ? 'positive' : 'negative'}">
+                                ${match.trophyChange > 0 ? '+' : ''}${match.trophyChange} 🏆
+                            </div>
+                            ${match.replay ? '<button class="replay-btn" data-index="' + index + '">▶️ Replay</button>' : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Add replay button handlers
+            historyList.querySelectorAll('.replay-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(btn.dataset.index);
+                    this.playReplay(matches[index]);
+                });
+            });
+
         } catch (error) {
             console.error('Error loading history:', error);
             historyList.innerHTML = '<p class="error">Failed to load history</p>';
         }
+    },
+
+    /**
+     * Get time ago string
+     */
+    getTimeAgo(date) {
+        const now = new Date();
+        const diff = now - date;
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        if (minutes < 1) return 'Just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        if (days < 7) return `${days}d ago`;
+        return date.toLocaleDateString();
+    },
+
+    /**
+     * Play replay
+     */
+    playReplay(match) {
+        if (!match.replay) {
+            alert('Replay not available for this match');
+            return;
+        }
+        
+        // TODO: Implement replay system
+        alert('Replay feature coming soon!');
     },
 
     /**

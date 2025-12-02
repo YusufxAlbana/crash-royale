@@ -93,17 +93,18 @@
         <div class="screen-header">
             <button class="btn-back" id="deck-back">←</button>
             <h2>Deck Builder</h2>
-            <div class="deck-cost">Avg Elixir: <span id="avg-elixir">0.0</span></div>
+            <div class="deck-cost">⚡ <span id="avg-elixir">0.0</span></div>
         </div>
-        
-        <div class="current-deck">
-            <h3>Your Deck (8 Cards)</h3>
-            <div id="deck-slots" class="deck-slots"></div>
-        </div>
-        
-        <div class="available-cards">
-            <h3>Available Cards</h3>
-            <div id="available-cards" class="cards-grid"></div>
+        <div class="deck-screen-content">
+            <div class="current-deck">
+                <h3>🎴 Battle Deck</h3>
+                <p class="deck-hint">Tap card to select, then tap another to swap</p>
+                <div id="deck-slots" class="deck-slots"></div>
+            </div>
+            <div class="available-cards">
+                <h3>📚 All Cards</h3>
+                <div id="available-cards" class="cards-grid"></div>
+            </div>
         </div>
     </div>
 
@@ -112,6 +113,7 @@
         <div class="screen-header">
             <button class="btn-back" id="history-back">←</button>
             <h2>Match History</h2>
+            <div class="history-stats" id="history-stats"></div>
         </div>
         <div id="history-list" class="history-list"></div>
     </div>
@@ -166,7 +168,16 @@
                 <!-- Elixir Bar -->
                 <div id="elixir-container">
                     <div id="elixir-bar">
-                        <div id="elixir-fill"></div>
+                        <div class="elixir-slot"></div>
+                        <div class="elixir-slot"></div>
+                        <div class="elixir-slot"></div>
+                        <div class="elixir-slot"></div>
+                        <div class="elixir-slot"></div>
+                        <div class="elixir-slot"></div>
+                        <div class="elixir-slot"></div>
+                        <div class="elixir-slot"></div>
+                        <div class="elixir-slot"></div>
+                        <div class="elixir-slot"></div>
                     </div>
                     <span id="elixir-count">0</span>
                     <span class="elixir-icon">💧</span>
