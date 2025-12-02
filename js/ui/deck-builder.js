@@ -163,13 +163,9 @@ const DeckBuilder = {
             window.currentUser.deck = [...this.currentDeck];
         }
 
-        // Save to Firebase
-        if (window.FirebaseService && window.currentUser && window.currentUser.odataId) {
-            try {
-                await FirebaseService.updateUserDeck(window.currentUser.odataId, this.currentDeck);
-            } catch (error) {
-                console.error('Error saving deck:', error);
-            }
+        // Save via AuthService
+        if (window.AuthService) {
+            AuthService.saveDeck(this.currentDeck);
         }
     },
 

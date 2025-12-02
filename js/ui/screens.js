@@ -196,8 +196,8 @@ const ScreenManager = {
         try {
             let matches = [];
             
-            if (window.FirebaseService && window.currentUser) {
-                matches = await FirebaseService.getMatchHistory(window.currentUser.odataId, 10);
+            if (window.AuthService) {
+                matches = AuthService.getMatchHistory();
             }
 
             if (matches.length === 0) {

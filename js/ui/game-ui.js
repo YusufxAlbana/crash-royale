@@ -211,34 +211,27 @@ const GameUI = {
     async updateUserTrophies(trophyChange, gameState) {
         if (!window.currentUser) return;
 
-        // Update local
-        window.currentUser.trophies = Math.max(0, (window.currentUser.trophies || 0) + trophyChange);
+        // Update trophies via AuthService
+        if (window.AuthService) {
+            window.currentUser.trophies = AuthService.updateTrophies(trophyChange);
+            
+            // Save match result
+            AuthService.saveMatchResult({
+                result: gameState.winner === 'player' ? 'win' : (gameState.winner === 'draw' ? 'draw' : 'lose'),
+                playerCrowns: gameState.playerCrowns,
+                enemyCrowns: gameState.enemyCrowns,
+                trophyChange: trophyChange,
+                opponentName: 'AI Bot'
+            });
+        } else {
+            // Fallback
+            window.currentUser.trophies = Math.max(0, (window.currentUser.trophies || 0) + trophyChange);
+        }
 
         // Update menu display
         const trophyEl = document.getElementById('player-trophies');
         if (trophyEl) {
             trophyEl.textContent = window.currentUser.trophies;
-        }
-
-        // Save to Firebase
-        if (window.FirebaseService && window.currentUser.odataId) {
-            try {
-                await FirebaseService.updateUserStats(window.currentUser.odataId, {
-                    trophies: window.currentUser.trophies
-                });
-
-                // Save match result
-                await FirebaseService.saveMatchResult(window.currentUser.odataId, {
-                    result: gameState.winner === 'player' ? 'win' : (gameState.winner === 'draw' ? 'draw' : 'lose'),
-                    playerCrowns: gameState.playerCrowns,
-                    enemyCrowns: gameState.enemyCrowns,
-                    trophyChange: trophyChange,
-                    opponentName: 'AI Bot',
-                    timestamp: Date.now()
-                });
-            } catch (error) {
-                console.error('Error saving match result:', error);
-            }
         }
     }
 };

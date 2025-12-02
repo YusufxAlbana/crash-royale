@@ -16,36 +16,23 @@ async function initApp() {
     // Initialize screen manager
     ScreenManager.init();
     
-    // Initialize Firebase
-    const firebaseReady = await initFirebase();
+    // Initialize Auth
+    initAuth();
     
     // Setup auth forms
     setupAuthForms();
     
     // Check for existing session
-    if (firebaseReady) {
-        checkAuthState();
-    } else {
-        // Firebase not configured, allow guest play
-        console.log('Firebase not configured, guest mode only');
-        ScreenManager.showScreen('auth');
-    }
+    checkAuthState();
 }
 
 /**
- * Initialize Firebase
+ * Initialize Auth
  */
-async function initFirebase() {
-    try {
-        if (window.FirebaseService) {
-            const initialized = FirebaseService.init();
-            if (initialized) {
-                console.log('Firebase initialized');
-                return true;
-            }
-        }
-    } catch (error) {
-        console.error('Firebase init error:', error);
+function initAuth() {
+    if (window.AuthService) {
+        AuthService.init();
+        return true;
     }
     return false;
 }
@@ -55,9 +42,9 @@ async function initFirebase() {
  */
 function checkAuthState() {
     if (window.AuthService) {
-        AuthService.onAuthStateChanged((user) => {
-            if (user) {
-                handleUserLogin(user);
+        AuthService.onAuthStateChanged((user, profile) => {
+            if (profile) {
+                handleUserLogin(profile);
             } else {
                 ScreenManager.showScreen('auth');
             }
@@ -77,7 +64,7 @@ function setupAuthForms() {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const email = document.getElementById('login-email').value;
+            const username = document.getElementById('login-username').value.trim();
             const password = document.getElementById('login-password').value;
             const errorEl = document.getElementById('login-error');
             
@@ -85,7 +72,7 @@ function setupAuthForms() {
                 errorEl.textContent = '';
                 
                 if (window.AuthService) {
-                    const user = await AuthService.login(email, password);
+                    const user = await AuthService.login(username, password);
                     handleUserLogin(user);
                 } else {
                     errorEl.textContent = 'Auth service not available';
@@ -102,16 +89,16 @@ function setupAuthForms() {
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const username = document.getElementById('register-username').value;
-            const email = document.getElementById('register-email').value;
+            const username = document.getElementById('register-username').value.trim();
             const password = document.getElementById('register-password').value;
+            const confirmPassword = document.getElementById('register-confirm').value;
             const errorEl = document.getElementById('register-error');
             
             try {
                 errorEl.textContent = '';
                 
                 if (window.AuthService) {
-                    const user = await AuthService.register(email, password, username);
+                    const user = await AuthService.register(username, password, confirmPassword);
                     handleUserLogin(user);
                 } else {
                     errorEl.textContent = 'Auth service not available';
@@ -119,14 +106,6 @@ function setupAuthForms() {
             } catch (error) {
                 errorEl.textContent = error.message;
             }
-        });
-    }
-
-    // Guest login
-    const guestBtn = document.getElementById('guest-login');
-    if (guestBtn) {
-        guestBtn.addEventListener('click', () => {
-            handleGuestLogin();
         });
     }
 }
@@ -139,51 +118,13 @@ async function handleUserLogin(user) {
     
     // Set current user
     window.currentUser = {
-        odataId: user.odataId || user.odataId || 'guest',
-        email: user.email || '',
-        username: user.username || user.displayName || 'Player',
+        odataId: user.odataId || 'user_' + Date.now(),
+        username: user.username || 'Player',
         trophies: user.trophies || 0,
         level: user.level || 1,
         gold: user.gold || 100,
-        deck: user.deck || [...DefaultDeck]
-    };
-    
-    // Load user data from Firestore
-    if (window.FirebaseService && user.odataId) {
-        try {
-            const userData = await FirebaseService.getUserData(user.odataId);
-            if (userData) {
-                window.currentUser = { ...window.currentUser, ...userData };
-            }
-        } catch (error) {
-            console.error('Error loading user data:', error);
-        }
-    }
-    
-    // Update UI
-    ScreenManager.updatePlayerInfo(window.currentUser);
-    
-    // Initialize deck builder
-    DeckBuilder.init();
-    
-    // Show menu
-    ScreenManager.showScreen('menu');
-}
-
-/**
- * Handle guest login
- */
-function handleGuestLogin() {
-    console.log('Guest login');
-    
-    window.currentUser = {
-        odataId: 'guest_' + Date.now(),
-        email: '',
-        username: 'Guest',
-        trophies: 0,
-        level: 1,
-        gold: 100,
-        deck: [...DefaultDeck]
+        deck: user.deck || [...DefaultDeck],
+        stats: user.stats || { wins: 0, losses: 0, draws: 0 }
     };
     
     // Update UI

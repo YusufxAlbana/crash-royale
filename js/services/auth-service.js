@@ -1,40 +1,30 @@
 /* ============================================
    AUTH SERVICE
-   Handles authentication operations
+   Handles authentication with username/password
+   Uses localStorage for simple auth
    ============================================ */
 
 const AuthService = {
     currentUser: null,
     userProfile: null,
     authStateListeners: [],
+    USERS_KEY: 'battle_arena_users',
+    CURRENT_USER_KEY: 'battle_arena_current_user',
 
     /**
-     * Initialize auth state listener
+     * Initialize auth service
      */
     init() {
-        if (FirebaseConfig.isOffline()) {
-            console.log("Auth running in offline mode");
-            return;
-        }
-
-        const auth = FirebaseConfig.getAuth();
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                this.currentUser = user;
-                this.userProfile = await FirebaseService.getUserProfile(user.uid);
-                
-                // Update last login
-                if (this.userProfile) {
-                    FirebaseService.updateUserProfile(user.uid, {});
-                }
-            } else {
-                this.currentUser = null;
-                this.userProfile = null;
+        // Check for existing session
+        const savedUser = localStorage.getItem(this.CURRENT_USER_KEY);
+        if (savedUser) {
+            try {
+                this.userProfile = JSON.parse(savedUser);
+                this.currentUser = { username: this.userProfile.username };
+            } catch (e) {
+                localStorage.removeItem(this.CURRENT_USER_KEY);
             }
-
-            // Notify listeners
-            this.authStateListeners.forEach(listener => listener(user, this.userProfile));
-        });
+        }
     },
 
     /**
@@ -44,105 +34,147 @@ const AuthService = {
         this.authStateListeners.push(callback);
         
         // Immediately call with current state
-        if (this.currentUser || FirebaseConfig.isOffline()) {
+        if (this.userProfile) {
             callback(this.currentUser, this.userProfile);
+        } else {
+            callback(null, null);
         }
+    },
+
+    /**
+     * Get all registered users
+     */
+    getUsers() {
+        const users = localStorage.getItem(this.USERS_KEY);
+        return users ? JSON.parse(users) : {};
+    },
+
+    /**
+     * Save users to localStorage
+     */
+    saveUsers(users) {
+        localStorage.setItem(this.USERS_KEY, JSON.stringify(users));
     },
 
     /**
      * Register new user
      */
-    async register(email, password, username) {
-        if (FirebaseConfig.isOffline()) {
-            throw new Error("Cannot register in offline mode");
+    async register(username, password, confirmPassword) {
+        // Validate
+        if (!username || username.length < 3) {
+            throw new Error('Username minimal 3 karakter');
+        }
+        if (!password || password.length < 4) {
+            throw new Error('Password minimal 4 karakter');
+        }
+        if (password !== confirmPassword) {
+            throw new Error('Password tidak cocok');
         }
 
-        const auth = FirebaseConfig.getAuth();
-        
-        try {
-            // Create auth user
-            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-            const user = userCredential.user;
+        const users = this.getUsers();
+        const userKey = username.toLowerCase();
 
-            // Update display name
-            await user.updateProfile({ displayName: username });
-
-            // Create user profile in Firestore
-            this.userProfile = await FirebaseService.createUserProfile(user.uid, username, email);
-            this.currentUser = user;
-
-            return { user, profile: this.userProfile };
-        } catch (error) {
-            console.error("Registration error:", error);
-            throw this.parseAuthError(error);
-        }
-    },
-
-    /**
-     * Login with email/password
-     */
-    async login(email, password) {
-        if (FirebaseConfig.isOffline()) {
-            throw new Error("Cannot login in offline mode");
+        // Check if username exists
+        if (users[userKey]) {
+            throw new Error('Username sudah digunakan');
         }
 
-        const auth = FirebaseConfig.getAuth();
-        
-        try {
-            const userCredential = await auth.signInWithEmailAndPassword(email, password);
-            const user = userCredential.user;
+        // Create user profile
+        const profile = {
+            odataId: 'user_' + Date.now(),
+            username: username,
+            password: this.hashPassword(password),
+            level: 1,
+            exp: 0,
+            trophies: 0,
+            gold: 1000,
+            gems: 100,
+            deck: [...DefaultDeck],
+            unlockedCards: [...Object.keys(CardsData)],
+            stats: {
+                wins: 0,
+                losses: 0,
+                draws: 0,
+                threeCrowns: 0
+            },
+            createdAt: Date.now(),
+            lastLogin: Date.now()
+        };
 
-            // Get user profile
-            this.userProfile = await FirebaseService.getUserProfile(user.uid);
-            this.currentUser = user;
+        // Save user
+        users[userKey] = profile;
+        this.saveUsers(users);
 
-            // Create profile if doesn't exist (edge case)
-            if (!this.userProfile) {
-                this.userProfile = await FirebaseService.createUserProfile(
-                    user.uid, 
-                    user.displayName || 'Player', 
-                    email
-                );
-            }
+        // Set current user
+        this.currentUser = { username: username };
+        this.userProfile = profile;
+        localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(profile));
 
-            return { user, profile: this.userProfile };
-        } catch (error) {
-            console.error("Login error:", error);
-            throw this.parseAuthError(error);
-        }
-    },
-
-    /**
-     * Login as guest (offline mode)
-     */
-    async loginAsGuest() {
-        this.currentUser = null;
-        this.userProfile = FirebaseService.createOfflineProfile('Guest_' + Math.floor(Math.random() * 9999));
-        
-        // Save to localStorage
-        localStorage.setItem('guest_profile', JSON.stringify(this.userProfile));
-        
         // Notify listeners
-        this.authStateListeners.forEach(listener => listener(null, this.userProfile));
-        
-        return { user: null, profile: this.userProfile };
+        this.authStateListeners.forEach(listener => listener(this.currentUser, this.userProfile));
+
+        return { odataId: profile.odataId, username: profile.username, ...profile };
+    },
+
+    /**
+     * Login with username/password
+     */
+    async login(username, password) {
+        if (!username || !password) {
+            throw new Error('Username dan password harus diisi');
+        }
+
+        const users = this.getUsers();
+        const userKey = username.toLowerCase();
+        const user = users[userKey];
+
+        if (!user) {
+            throw new Error('Username tidak ditemukan');
+        }
+
+        if (user.password !== this.hashPassword(password)) {
+            throw new Error('Password salah');
+        }
+
+        // Update last login
+        user.lastLogin = Date.now();
+        users[userKey] = user;
+        this.saveUsers(users);
+
+        // Set current user
+        this.currentUser = { username: user.username };
+        this.userProfile = user;
+        localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(user));
+
+        // Notify listeners
+        this.authStateListeners.forEach(listener => listener(this.currentUser, this.userProfile));
+
+        return { odataId: user.odataId, username: user.username, ...user };
     },
 
     /**
      * Logout
      */
     async logout() {
-        if (!FirebaseConfig.isOffline() && this.currentUser) {
-            const auth = FirebaseConfig.getAuth();
-            await auth.signOut();
-        }
-
         this.currentUser = null;
         this.userProfile = null;
-        localStorage.removeItem('guest_profile');
+        localStorage.removeItem(this.CURRENT_USER_KEY);
 
         // Notify listeners
         this.authStateListeners.forEach(listener => listener(null, null));
+    },
+
+    /**
+     * Simple hash function for password
+     */
+    hashPassword(password) {
+        let hash = 0;
+        for (let i = 0; i < password.length; i++) {
+            const char = password.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return 'hash_' + Math.abs(hash).toString(16);
     },
 
     /**
@@ -156,13 +188,7 @@ const AuthService = {
      * Get current user ID
      */
     getUserId() {
-        if (this.currentUser) {
-            return this.currentUser.uid;
-        }
-        if (this.userProfile) {
-            return this.userProfile.id;
-        }
-        return null;
+        return this.userProfile ? this.userProfile.odataId : null;
     },
 
     /**
@@ -173,54 +199,79 @@ const AuthService = {
     },
 
     /**
-     * Check if user is guest
+     * Update user profile
      */
-    isGuest() {
-        return this.userProfile !== null && this.currentUser === null;
-    },
+    updateProfile(updates) {
+        if (!this.userProfile) return;
 
-    /**
-     * Update profile locally (for offline/guest mode)
-     */
-    updateLocalProfile(updates) {
-        if (this.userProfile) {
-            Object.assign(this.userProfile, updates);
+        const users = this.getUsers();
+        const userKey = this.userProfile.username.toLowerCase();
+
+        if (users[userKey]) {
+            Object.assign(users[userKey], updates);
+            this.saveUsers(users);
             
-            if (this.isGuest()) {
-                localStorage.setItem('guest_profile', JSON.stringify(this.userProfile));
-            }
+            Object.assign(this.userProfile, updates);
+            localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(this.userProfile));
         }
     },
 
     /**
-     * Parse Firebase auth errors to user-friendly messages
+     * Save deck
      */
-    parseAuthError(error) {
-        const errorMessages = {
-            'auth/email-already-in-use': 'Email sudah terdaftar',
-            'auth/invalid-email': 'Format email tidak valid',
-            'auth/operation-not-allowed': 'Operasi tidak diizinkan',
-            'auth/weak-password': 'Password terlalu lemah (min 6 karakter)',
-            'auth/user-disabled': 'Akun telah dinonaktifkan',
-            'auth/user-not-found': 'Email tidak terdaftar',
-            'auth/wrong-password': 'Password salah',
-            'auth/too-many-requests': 'Terlalu banyak percobaan, coba lagi nanti',
-            'auth/network-request-failed': 'Koneksi gagal, periksa internet Anda'
-        };
-
-        return new Error(errorMessages[error.code] || error.message);
+    saveDeck(deck) {
+        this.updateProfile({ deck: deck });
     },
 
     /**
-     * Load guest profile from localStorage
+     * Update trophies
      */
-    loadGuestProfile() {
-        const saved = localStorage.getItem('guest_profile');
-        if (saved) {
-            this.userProfile = JSON.parse(saved);
-            return this.userProfile;
-        }
-        return null;
+    updateTrophies(change) {
+        if (!this.userProfile) return;
+        
+        const newTrophies = Math.max(0, (this.userProfile.trophies || 0) + change);
+        this.updateProfile({ trophies: newTrophies });
+        return newTrophies;
+    },
+
+    /**
+     * Save match result
+     */
+    saveMatchResult(result) {
+        if (!this.userProfile) return;
+
+        // Get match history
+        const historyKey = 'match_history_' + this.userProfile.odataId;
+        const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+        
+        // Add new match
+        history.unshift({
+            ...result,
+            timestamp: Date.now()
+        });
+
+        // Keep only last 20
+        localStorage.setItem(historyKey, JSON.stringify(history.slice(0, 20)));
+
+        // Update stats
+        const stats = this.userProfile.stats || { wins: 0, losses: 0, draws: 0, threeCrowns: 0 };
+        if (result.result === 'win') stats.wins++;
+        else if (result.result === 'lose') stats.losses++;
+        else stats.draws++;
+        
+        if (result.playerCrowns === 3) stats.threeCrowns++;
+
+        this.updateProfile({ stats: stats });
+    },
+
+    /**
+     * Get match history
+     */
+    getMatchHistory() {
+        if (!this.userProfile) return [];
+        
+        const historyKey = 'match_history_' + this.userProfile.odataId;
+        return JSON.parse(localStorage.getItem(historyKey) || '[]');
     }
 };
 
